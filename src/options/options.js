@@ -158,7 +158,7 @@ list.addEventListener('keydown', (event) => {
 
 function renderProviderFields(provider, values = {}) {
   providerFields.replaceChildren();
-  $('provider-help').textContent = t(provider.description);
+  $('provider-help').replaceChildren(richText(document, t(provider.description)));
   for (const field of provider.fields) {
     const label = element('label', 'field');
     const input = element('input');
@@ -170,7 +170,11 @@ function renderProviderFields(provider, values = {}) {
     input.value = values[field.key] ?? '';
     const caption = field.required ? t(field.label) : t('editor.optional', { label: t(field.label) });
     label.append(element('span', '', caption), input);
-    if (field.help) label.append(element('small', 'muted', t(field.help)));
+    if (field.help) {
+      const help = element('small', 'muted');
+      help.append(richText(document, t(field.help)));
+      label.append(help);
+    }
     const error = element('small', 'error');
     error.dataset.errorFor = field.key;
     label.append(error);
@@ -346,7 +350,8 @@ $('cli-copy').addEventListener('click', async () => {
 });
 
 function renderCliHelper() {
-  $('cli-helper-text').replaceChildren(richText(document, t(IS_MAC ? 'options.cliHelper.mac' : 'options.cliHelper.other')));
+  $('cli-helper-step2').replaceChildren(richText(document, t(IS_MAC ? 'options.cliHelper.step2.mac' : 'options.cliHelper.step2.other')));
+  $('cli-helper-step3').replaceChildren(richText(document, t('options.cliHelper.step3', { button: t('options.merge') })));
   $('cli-command').textContent = accountIdCommand({ copyToClipboard: IS_MAC });
 }
 

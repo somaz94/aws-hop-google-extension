@@ -31,6 +31,8 @@ body {
   font: 13px/1.4 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   background: var(--bg);
   color: var(--fg);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .bar {

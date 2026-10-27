@@ -6,11 +6,13 @@ const ATTRIBUTES = Object.freeze([
   ['data-i18n-aria-label', 'aria-label'],
 ]);
 
-/** Builds text where `backticked` parts become <code>, without ever parsing the text as HTML. */
+/** Builds text where `backticked` parts become <code> and newlines <br>, without ever parsing the text as HTML. */
 export function richText(doc, text) {
   const fragment = doc.createDocumentFragment();
-  for (const part of text.split(/(`[^`]+`)/)) {
-    if (/^`[^`]+`$/.test(part)) {
+  for (const part of text.split(/(`[^`]+`|\n)/)) {
+    if (part === '\n') {
+      fragment.append(doc.createElement('br'));
+    } else if (/^`[^`]+`$/.test(part)) {
       const code = doc.createElement('code');
       code.textContent = part.slice(1, -1);
       fragment.append(code);

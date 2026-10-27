@@ -86,10 +86,20 @@ describe('t', () => {
 });
 
 describe('DOM', () => {
-  test('richText turns backticks into code without parsing HTML', () => {
+  test('richText turns backticks into code and newlines into breaks, without parsing HTML', () => {
     const container = document.createElement('p');
-    container.append(richText(document, 'Run `aws sts` then <b>merge</b>'));
-    expect(container.innerHTML).toBe('Run <code>aws sts</code> then &lt;b&gt;merge&lt;/b&gt;');
+    container.append(richText(document, 'Run `aws sts`\nthen <b>merge</b>'));
+    expect(container.innerHTML).toBe('Run <code>aws sts</code><br>then &lt;b&gt;merge&lt;/b&gt;');
+  });
+
+  test('a line break never sits inside a code span or at either end', () => {
+    for (const language of LANGUAGES) {
+      for (const [key, text] of Object.entries(catalog(language))) {
+        const codeSpans = text.split('`').filter((_, index) => index % 2 === 1);
+        const broken = codeSpans.some((code) => code.includes('\n')) || /^\n|\n$/.test(text);
+        expect({ language, key, broken }).toEqual({ language, key, broken: false });
+      }
+    }
   });
 
   test('applyTranslations fills text, attributes and the page language', () => {

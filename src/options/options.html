@@ -27,10 +27,21 @@
 
     <section>
       <h2 data-i18n="options.import">Import</h2>
-      <p class="muted" data-i18n="options.importHelp">Paste an AWS Hop export (JSON) or an AWS CLI config file.</p>
+      <p class="muted" data-i18n="options.importIntro">Paste an AWS Hop export (JSON) or an AWS CLI config file.</p>
+      <ul class="muted rules">
+        <li data-i18n="options.importRule.sso"></li>
+        <li data-i18n="options.importRule.role"></li>
+        <li data-i18n="options.importRule.iam"></li>
+        <li data-i18n="options.importRule.keys"></li>
+        <li data-i18n="options.importRule.dedupe"></li>
+      </ul>
       <details id="cli-helper" class="helper">
         <summary data-i18n="options.cliHelper.title">Get account IDs from your AWS CLI profiles</summary>
-        <p id="cli-helper-text" class="muted"></p>
+        <ol class="muted steps">
+          <li data-i18n="options.cliHelper.step1"></li>
+          <li id="cli-helper-step2"></li>
+          <li id="cli-helper-step3"></li>
+        </ol>
         <pre><code id="cli-command"></code></pre>
         <button id="cli-copy" type="button" data-i18n="options.cliHelper.copy">Copy command</button>
       </details>

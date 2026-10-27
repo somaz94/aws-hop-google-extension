@@ -278,6 +278,13 @@ async function run(cdp) {
   await choose(options, 'setting-language', 'en');
   check('switches to English from the settings', await waitFor(() => options.eval(`document.title === 'AWS Hop settings' && document.title`), 'English').catch(() => null), 'AWS Hop settings');
   check('opens the CLI helper while the list is empty', await options.eval(`document.getElementById('cli-helper').open && document.getElementById('cli-command').textContent.startsWith('for p in $(aws configure list-profiles)')`), true);
+  const platform = await options.eval('chrome.runtime.getPlatformInfo().then((info) => info.os)');
+  check(`picks the command for this platform (${platform})`, await options.eval(`document.querySelector('#cli-shells [aria-pressed="true"]').dataset.shell`), { mac: 'macos', win: 'windows' }[platform] ?? 'linux');
+  await options.eval(`document.querySelector('#cli-shells [data-shell="windows"]').click()`);
+  check('switches the command to PowerShell', await options.eval(`[document.getElementById('cli-helper-step1').textContent, document.getElementById('cli-command').textContent.split('\\n').at(-1)]`), [
+    'Copy the command below and run it in PowerShell.',
+    '} | Set-Clipboard',
+  ]);
 
   const imported = await importAccounts(options, AWS_CONFIG);
   check('imports ~/.aws/config once per account', imported, {

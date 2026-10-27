@@ -4,14 +4,13 @@ import { formatAccountId } from '../lib/account.js';
 import { buildProfileUrl, normalizeProfile, profileAccount, profileColor, validateProfile } from '../lib/profile.js';
 import { createStore } from '../lib/store.js';
 import { SUGGESTED_TAGS } from '../lib/tag.js';
-import { accountIdCommand } from '../importers/awsConfig.js';
+import { accountIdCommand, CLI_SHELLS, getShell, shellForPlatform } from '../importers/accountIdCommand.js';
 import { exportProfiles } from '../importers/json.js';
 import { importProfiles, mergeProfiles } from '../importers/index.js';
 import { getProvider, listProviders } from '../providers/index.js';
 
 const store = createStore();
 const $ = (id) => document.getElementById(id);
-const IS_MAC = /Mac/.test(navigator.userAgent);
 
 const editor = $('editor');
 const form = $('editor-form');
@@ -19,6 +18,7 @@ const providerFields = $('provider-fields');
 
 let profiles = [];
 let editingId = null;
+let cliShell = shellForPlatform(null);
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -349,10 +349,25 @@ $('cli-copy').addEventListener('click', async () => {
   setTimeout(() => { $('cli-copy').textContent = t('options.cliHelper.copy'); }, 1500);
 });
 
+$('cli-shells').addEventListener('click', (event) => {
+  const id = event.target.closest('button')?.dataset.shell;
+  if (!id) return;
+  cliShell = getShell(id);
+  renderCliHelper();
+});
+
 function renderCliHelper() {
-  $('cli-helper-step2').replaceChildren(richText(document, t(IS_MAC ? 'options.cliHelper.step2.mac' : 'options.cliHelper.step2.other')));
+  $('cli-shells').replaceChildren(...CLI_SHELLS.map((shell) => {
+    const button = element('button', '', t(shell.label));
+    button.type = 'button';
+    button.dataset.shell = shell.id;
+    button.setAttribute('aria-pressed', String(shell.id === cliShell.id));
+    return button;
+  }));
+  $('cli-helper-step1').replaceChildren(richText(document, t('options.cliHelper.step1', { terminal: t(cliShell.terminal) })));
+  $('cli-helper-step2').replaceChildren(richText(document, t(cliShell.clipboard ? 'options.cliHelper.step2.clipboard' : 'options.cliHelper.step2.print')));
   $('cli-helper-step3').replaceChildren(richText(document, t('options.cliHelper.step3', { button: t('options.merge') })));
-  $('cli-command').textContent = accountIdCommand({ copyToClipboard: IS_MAC });
+  $('cli-command').textContent = accountIdCommand(cliShell.id);
 }
 
 $('export').addEventListener('click', () => {
@@ -401,6 +416,7 @@ store.onChange(({ profiles: profilesChanged, settings }) => {
 });
 
 async function init() {
+  cliShell = shellForPlatform((await chrome.runtime.getPlatformInfo()).os);
   profiles = await store.loadProfiles();
   await loadSettings();
   $('cli-helper').open = profiles.length === 0;

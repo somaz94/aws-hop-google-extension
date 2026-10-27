@@ -106,7 +106,7 @@ Three optional keys are read as well: `tag`, `group` and `color` (a hex color). 
 
 Profiles that sign in to the same place are imported once. When `default`, `shop` and `terraform-shop` all point at one account, only `shop` comes in: any name wins over `default`, then the shortest. Profiles for accounts already in your list are not added again, and importing again never overwrites the tags, groups, colors and protection you set in AWS Hop.
 
-Profiles that only hold access keys carry no account ID. The Import section has a command that looks every profile's account up with `aws sts get-caller-identity` and prints it in the import format; paste its output and merge.
+Profiles that only hold access keys carry no account ID. The Import section has a command that looks every profile's account up with `aws sts get-caller-identity` and writes it in the import format: a shell loop for macOS and Linux, a PowerShell one for Windows, picked for your system and switchable. On macOS and Windows the result goes straight to the clipboard; paste it and merge.
 
 ```ini
 [sso-session corp]

@@ -34,16 +34,6 @@ export function parseIni(text) {
   return sections;
 }
 
-/** A shell loop that prints one importable profile per AWS CLI profile, its account ID read from STS. */
-export function accountIdCommand({ copyToClipboard = false } = {}) {
-  return [
-    'for p in $(aws configure list-profiles); do',
-    '  id=$(aws sts get-caller-identity --profile "$p" --query Account --output text 2>/dev/null) || continue',
-    `  printf '[profile %s]\\naws_account_id = %s\\n\\n' "$p" "$id"`,
-    copyToClipboard ? 'done | pbcopy' : 'done',
-  ].join('\n');
-}
-
 function profileName(section) {
   if (section.name === 'default') return 'default';
   const match = /^profile\s+(.+)$/.exec(section.name);

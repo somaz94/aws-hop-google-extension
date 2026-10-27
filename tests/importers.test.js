@@ -1,6 +1,5 @@
 import { describe, test, expect, afterEach } from '@jest/globals';
-import { execFileSync } from 'node:child_process';
-import { accountIdCommand, parseIni, profilesFromAwsConfig } from '../src/importers/awsConfig.js';
+import { parseIni, profilesFromAwsConfig } from '../src/importers/awsConfig.js';
 import { EXPORT_FORMAT, EXPORT_VERSION, exportProfiles, profilesFromJson } from '../src/importers/json.js';
 import { dedupeProfiles, detectFormat, importProfiles, mergeProfiles } from '../src/importers/index.js';
 import { setLanguage } from '../src/i18n/index.js';
@@ -250,36 +249,6 @@ role_arn = arn:aws:iam::111122223333:role/Admin
   test('explains in Korean too', () => {
     setLanguage('ko');
     expect(importProfiles(CONFIG, { idFactory }).skipped[0].reason).toBe('로그인 대상이 같아 shop 하나만 가져옵니다');
-  });
-});
-
-describe('accountIdCommand', () => {
-  const fakeAws = `aws() {
-  if [ "$1" = configure ]; then printf 'default\\nshop\\nterraform-shop\\nexpired\\n'; return; fi
-  case "$4" in default|shop|terraform-shop) echo 111122223333 ;; *) return 255 ;; esac
-}`;
-
-  test('prints the loop, ending in pbcopy only when asked', () => {
-    expect(accountIdCommand().split('\n')).toEqual([
-      'for p in $(aws configure list-profiles); do',
-      '  id=$(aws sts get-caller-identity --profile "$p" --query Account --output text 2>/dev/null) || continue',
-      `  printf '[profile %s]\\naws_account_id = %s\\n\\n' "$p" "$id"`,
-      'done',
-    ]);
-    expect(accountIdCommand({ copyToClipboard: true }).endsWith('done | pbcopy')).toBe(true);
-  });
-
-  test.each(['bash', 'zsh'])('its %s output imports as one account per target', (shell) => {
-    let output;
-    try {
-      output = execFileSync(shell, ['-c', `${fakeAws}\n${accountIdCommand()}`], { encoding: 'utf8' });
-    } catch (error) {
-      if (error.code === 'ENOENT') return;
-      throw error;
-    }
-    const { profiles, skipped } = importProfiles(output, { idFactory: () => 'id' });
-    expect(profiles.map((p) => [p.name, p.fields.account])).toEqual([['shop', '111122223333']]);
-    expect(skipped.map((s) => s.name)).toEqual(['default', 'terraform-shop']);
   });
 });
 

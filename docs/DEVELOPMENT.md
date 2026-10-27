@@ -31,7 +31,7 @@ Plain ES modules, loaded straight from `src/` with no bundler. Each directory ha
 |---|---|
 | `src/providers/` | One module per sign-in method, plus the registry in `index.js` |
 | `src/lib/` | The account model, tags and colors, storage, console account detection, matching and search. No UI and no Chrome API other than storage |
-| `src/importers/` | Parsers that turn `~/.aws/config` or JSON into accounts, de-duplication and merging |
+| `src/importers/` | Parsers that turn `~/.aws/config` or JSON into accounts, de-duplication and merging, and the account ID command for each terminal (one `CLI_SHELLS` entry per terminal) |
 | `src/i18n/` | One message catalog per language, the lookup function and the DOM helper that fills `data-i18n` attributes |
 | `src/content/` | The account guard on console pages |
 | `src/popup/`, `src/options/` | The two extension pages; thin glue over `src/lib` |

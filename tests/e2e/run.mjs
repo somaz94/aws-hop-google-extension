@@ -4,7 +4,6 @@
 // options page, the popup and the guard over the DevTools protocol. Needs Node 22+, openssl and network
 // access the first time, to download Chrome for Testing. CHROME_BIN skips the download.
 import { execFileSync, spawn } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs';
 import { createServer } from 'node:https';
 import { homedir, tmpdir } from 'node:os';
@@ -45,12 +44,6 @@ function chromeBinary() {
   const match = /^chrome@\S+ (.+)$/m.exec(out);
   if (!match) throw new Error(`Could not find the Chrome for Testing path in:\n${out}`);
   return match[1].trim();
-}
-
-/** Unpacked extensions without a `key` get an ID derived from their directory path. */
-function extensionId(path) {
-  const hex = createHash('sha256').update(path).digest('hex').slice(0, 32);
-  return [...hex].map((c) => String.fromCharCode(97 + parseInt(c, 16))).join('');
 }
 
 function certificate(dir) {
@@ -151,7 +144,14 @@ class Cdp {
       },
       close: () => this.send('Target.closeTarget', { targetId }),
     };
-    await waitFor(() => page.eval(`location.href.startsWith(${JSON.stringify(url.split('#')[0])}) && document.readyState === 'complete'`), `load ${url}`);
+    const prefix = url.split('#')[0];
+    let seen = null;
+    await waitFor(async () => {
+      seen = await page.eval('({ href: location.href, ready: document.readyState })');
+      return seen.href.startsWith(prefix) && seen.ready === 'complete';
+    }, `load ${url}`).catch((error) => {
+      throw new Error(`${error.message}; the tab is at ${JSON.stringify(seen)}`);
+    });
     return page;
   }
 
@@ -231,8 +231,30 @@ async function popupOpens(cdp, base, query, expectedUrl) {
   check(`popup "${query}" + Enter opens ${expectedUrl}`, opened, expectedUrl);
 }
 
-async function run(cdp, id) {
-  const base = `chrome-extension://${id}/src`;
+/**
+ * Asks Chrome which ID it gave the unpacked extension, which also waits until it has finished loading.
+ * Opening chrome-extension:// URLs any earlier lands on an error page on a slow first start (CI).
+ */
+async function loadedExtension(cdp) {
+  const page = await cdp.open('chrome://extensions/');
+  const info = await waitFor(
+    () => page.eval(`chrome.developerPrivate.getExtensionsInfo().then((list) => list.find((e) => e.name === 'AWS Hop') ?? null)`),
+    'AWS Hop to appear in chrome://extensions',
+    30000,
+  );
+  await page.close();
+  return info;
+}
+
+async function run(cdp) {
+  console.log('Extension');
+  const extension = await loadedExtension(cdp);
+  check('Chrome loads it with no manifest errors or install warnings', {
+    state: extension.state,
+    manifestErrors: extension.manifestErrors.map((e) => e.message),
+    installWarnings: extension.installWarnings,
+  }, { state: 'ENABLED', manifestErrors: [], installWarnings: [] });
+  const base = `chrome-extension://${extension.id}/src`;
 
   console.log('Options page');
   const options = await cdp.open(`${base}/options/options.html`);
@@ -313,7 +335,7 @@ try {
   const launched = await launchChrome(binary, join(work, 'profile'), server.address().port);
   chrome = launched.chrome;
   const cdp = await Cdp.connect(launched.url);
-  await run(cdp, extensionId(ROOT));
+  await run(cdp);
   cdp.ws.close();
 } catch (error) {
   failures += 1;

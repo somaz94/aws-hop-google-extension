@@ -125,7 +125,7 @@ make bump-version VERSION=0.2.0
 make package     # writes dist/aws-hop.zip
 ```
 
-Upload the ZIP in the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole). The review asks why each permission is needed; the reasons are the Permissions table in the README. Host access justification, in short: the content script reads which AWS account the console tab is signed in to and draws a colored label, so users can tell a protected account, such as production, from the others. Link [Privacy](PRIVACY.md) as the privacy policy.
+Upload the ZIP in the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole). The listing text, the Privacy tab answers (single purpose, one justification per permission, data usage) and the reviewer test instructions are in [DESCRIPTION.md](DESCRIPTION.md); keep them in step with the Permissions table in the README. Link [Privacy](PRIVACY.md) as the privacy policy.
 
 <br/>
 

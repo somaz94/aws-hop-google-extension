@@ -73,6 +73,8 @@ export default Object.freeze({
   'popup.addThis': '추가',
   'popup.addThisTitle': '이 계정 추가',
   'popup.guarded': '보호 계정',
+  'popup.recent': '최근',
+  'popup.confirmOpen': '보호 계정입니다. 열려면 Enter를 한 번 더 누르거나 다시 클릭하세요',
 
   'options.title': 'AWS Hop 설정',
   'options.subtitle': '계정 목록은 Chrome 동기화 저장소에 보관합니다.\n비밀번호와 액세스 키는 저장하지 않습니다.',
@@ -114,6 +116,8 @@ export default Object.freeze({
   'options.openIn.new': '새 탭',
   'options.openIn.current': '현재 탭',
   'options.openInHelp': 'Shift, Ctrl, Cmd를 누른 채 열거나 마우스 가운데 버튼으로 클릭하면 새 탭과 현재 탭 중 다른 쪽에 열립니다.',
+  'options.showRecent': '최근에 연 계정을 팝업 맨 위에 보여 주기',
+  'options.confirmGuarded': '팝업에서 보호 계정을 열기 전에 한 번 더 확인하기',
   'options.guardEnabled': 'AWS 콘솔 페이지에 계정 표시 띄우기',
   'options.guardShowUnregistered': '목록에 없는 계정도 표시하기',
   'options.guardTitlePrefix': '보호 계정의 탭 제목 앞에 계정 이름 붙이기',

@@ -6,6 +6,7 @@
   --hover: #f2f3f3;
   --selected: #e8f2fc;
   --accent: #0972d3;
+  --danger: #d13212;
   --input-bg: #ffffff;
   color-scheme: light dark;
 }
@@ -19,6 +20,7 @@
     --hover: #192534;
     --selected: #1d3350;
     --accent: #539fe5;
+    --danger: #ff7a5c;
     --input-bg: #16212f;
   }
 }
@@ -104,6 +106,11 @@ body {
   text-transform: uppercase;
 }
 
+.divider {
+  margin: 4px 12px;
+  border-top: 1px solid var(--line);
+}
+
 .row {
   display: flex;
   gap: 8px;
@@ -115,6 +122,7 @@ body {
 .row:hover { background: var(--hover); }
 .row.guarded { box-shadow: inset 3px 0 0 #d13212; }
 .row[aria-selected="true"] { background: var(--selected); }
+.row.confirming .meta { color: var(--danger); font-weight: 600; }
 
 .dot {
   flex: none;

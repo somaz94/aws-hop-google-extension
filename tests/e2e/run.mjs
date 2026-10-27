@@ -384,6 +384,35 @@ async function run(cdp) {
   check('closes itself after opening an account', (await cdp.pageUrls()).filter((url) => url.endsWith('/popup/popup.html')).length, 1);
   await popupOpens(cdp, base, 'data', 'https://example.awsapps.com/start/#/console?account_id=777788889999&role_name=ReadOnly');
   await popupOpens(cdp, base, 'shop-prod', 'https://111122223333.signin.aws.amazon.com/console');
+  const recentNames = await options.eval(`Promise.all([chrome.storage.local.get('recentProfiles'), chrome.storage.sync.get(null)])
+    .then(([local, sync]) => (local.recentProfiles ?? []).map((id) => sync['profile:' + id].name))`);
+  check('remembers opened accounts on this device, latest first, before the popup closes', recentNames, ['shop-prod', 'data-sso', 'shop-dev']);
+
+  await options.eval(`document.getElementById('setting-confirmGuarded').click()`);
+  await waitFor(() => options.eval(`chrome.storage.sync.get('settings').then((items) => items.settings?.confirmGuarded || null)`), 'the confirm setting');
+  const prodUrl = 'https://111122223333.signin.aws.amazon.com/console';
+  const prodTabs = async () => (await cdp.pageUrls()).filter((url) => url === prodUrl).length;
+  const tabsBefore = await prodTabs();
+  const confirmPopup = await cdp.open(`${base}/popup/popup.html`);
+  await waitFor(() => confirmPopup.eval(`document.querySelectorAll('.row').length || null`), 'popup rows');
+  const enter = () => confirmPopup.eval(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }))`);
+  await confirmPopup.eval(`(() => {
+    const search = document.getElementById('search');
+    search.value = 'shop-prod';
+    search.dispatchEvent(new Event('input'));
+  })()`);
+  await enter();
+  await sleep(500);
+  check('a protected account waits for a second Enter', [await confirmPopup.eval(`document.querySelector('.row.confirming .name')?.textContent`), await prodTabs()], ['shop-prod', tabsBefore]);
+  await enter();
+  check('and opens on it', await waitFor(async () => ((await prodTabs()) > tabsBefore ? true : null), 'the confirmed tab').catch(() => false), true);
+  await options.eval(`document.getElementById('setting-confirmGuarded').click()`);
+
+  await options.eval(`document.getElementById('setting-showRecent').click()`);
+  check('turning the recent list off forgets it', await waitFor(
+    () => options.eval(`chrome.storage.local.get('recentProfiles').then((items) => (items.recentProfiles ? null : 'cleared'))`),
+    'the recent list to clear',
+  ).catch(() => null), 'cleared');
 
   console.log('Korean');
   await choose(options, 'setting-language', 'ko');

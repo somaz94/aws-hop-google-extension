@@ -6,11 +6,13 @@ import { identityFromHost } from '../lib/identity.js';
 import { matchProfile } from '../lib/match.js';
 import { MSG } from '../lib/messages.js';
 import { buildProfileUrl, profileAccount, profileColor } from '../lib/profile.js';
-import { filterProfiles, groupProfiles, moveSelection, resolveOpenTarget } from '../lib/search.js';
+import { createRecentStore, recentProfiles } from '../lib/recent.js';
+import { moveSelection, needsConfirmation, popupSections, resolveOpenTarget } from '../lib/search.js';
 import { createStore } from '../lib/store.js';
 import { getProvider } from '../providers/index.js';
 
 const store = createStore();
+const recentStore = createRecentStore();
 const $ = (id) => document.getElementById(id);
 
 const ui = {
@@ -26,6 +28,8 @@ let settings = null;
 let visible = [];
 let selected = -1;
 let currentProfileId = null;
+let recentIds = [];
+let confirmingId = null;
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -41,7 +45,8 @@ function metaLine(profile) {
 
 function renderRow(profile, index) {
   const color = profileColor(profile);
-  const row = element('li', profile.guarded ? 'row guarded' : 'row');
+  const confirming = profile.id === confirmingId;
+  const row = element('li', ['row', profile.guarded && 'guarded', confirming && 'confirming'].filter(Boolean).join(' '));
   row.setAttribute('role', 'option');
   row.setAttribute('aria-selected', String(index === selected));
   row.dataset.index = String(index);
@@ -50,7 +55,7 @@ function renderRow(profile, index) {
   const dot = element('span', 'dot');
   dot.style.background = color;
   const main = element('span', 'main');
-  main.append(element('span', 'name', profile.name), element('span', 'meta', metaLine(profile)));
+  main.append(element('span', 'name', profile.name), element('span', 'meta', confirming ? t('popup.confirmOpen') : metaLine(profile)));
   row.append(dot, main);
   if (profile.tag) {
     const badge = element('span', 'badge', profile.tag);
@@ -62,19 +67,27 @@ function renderRow(profile, index) {
   return row;
 }
 
+function divider() {
+  const node = element('li', 'divider');
+  node.setAttribute('role', 'presentation');
+  return node;
+}
+
 function render() {
-  const query = ui.search.value;
-  // Grouped while browsing; a flat, ranked list while searching.
-  const sections = query.trim() ? [{ group: '', profiles: filterProfiles(profiles, query) }] : groupProfiles(profiles);
+  const recent = settings.showRecent ? recentProfiles(profiles, recentIds) : [];
+  const sections = popupSections(profiles, { query: ui.search.value, recent });
   visible = sections.flatMap((section) => section.profiles);
   if (selected >= visible.length) selected = visible.length - 1;
 
   ui.list.replaceChildren();
   let index = 0;
-  for (const section of sections) {
-    if (section.group && sections.length > 1) ui.list.append(element('li', 'group', section.group));
+  sections.forEach((section, position) => {
+    if (section.recent) ui.list.append(element('li', 'group', t('popup.recent')));
+    else if (section.group && sections.length > 1) ui.list.append(element('li', 'group', section.group));
+    // Without a heading, ungrouped accounts would read as part of the section above them.
+    else if (position > 0) ui.list.append(divider());
     for (const profile of section.profiles) ui.list.append(renderRow(profile, index++));
-  }
+  });
   ui.empty.hidden = profiles.length > 0;
   ui.noMatch.hidden = profiles.length === 0 || visible.length > 0;
   ui.list.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
@@ -122,6 +135,13 @@ async function detectCurrent(tab) {
 }
 
 async function open(profile, invert) {
+  if (needsConfirmation(profile, settings, confirmingId)) {
+    confirmingId = profile.id;
+    render();
+    return;
+  }
+  // Before the tab opens: a new active tab closes the popup and would cut the write short.
+  if (settings.showRecent) await recentStore.record(profile.id);
   const url = buildProfileUrl(profile);
   if (resolveOpenTarget(settings.openIn, invert) === 'current-tab') await chrome.tabs.update({ url });
   else await chrome.tabs.create({ url });
@@ -131,6 +151,7 @@ async function open(profile, invert) {
 const inverted = (event) => event.shiftKey || event.metaKey || event.ctrlKey || event.button === 1;
 
 ui.search.addEventListener('input', () => {
+  confirmingId = null;
   selected = ui.search.value.trim() ? 0 : -1;
   render();
 });
@@ -138,11 +159,16 @@ ui.search.addEventListener('input', () => {
 document.addEventListener('keydown', (event) => {
   if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
     event.preventDefault();
+    confirmingId = null;
     selected = moveSelection(selected, event.key === 'ArrowDown' ? 1 : -1, visible.length);
     render();
   } else if (event.key === 'Enter' && visible.length && !(event.target instanceof HTMLButtonElement)) {
     event.preventDefault();
     open(visible[Math.max(selected, 0)], inverted(event));
+  } else if (event.key === 'Escape' && confirmingId) {
+    event.preventDefault();
+    confirmingId = null;
+    render();
   } else if (event.key === 'Escape' && ui.search.value) {
     event.preventDefault();
     ui.search.value = '';
@@ -153,7 +179,9 @@ document.addEventListener('keydown', (event) => {
 
 const onRowClick = (event) => {
   const row = event.target.closest('.row');
-  if (row) open(visible[Number(row.dataset.index)], inverted(event));
+  if (!row) return;
+  selected = Number(row.dataset.index);
+  open(visible[selected], inverted(event));
 };
 ui.list.addEventListener('click', onRowClick);
 ui.list.addEventListener('auxclick', (event) => {
@@ -164,7 +192,7 @@ $('open-options').addEventListener('click', () => chrome.runtime.openOptionsPage
 $('add-first').addEventListener('click', () => chrome.runtime.openOptionsPage());
 
 async function init() {
-  [profiles, settings] = await Promise.all([store.loadProfiles(), store.loadSettings()]);
+  [profiles, settings, recentIds] = await Promise.all([store.loadProfiles(), store.loadSettings(), recentStore.load()]);
   setLanguage(resolveLanguage(settings.language, chrome.i18n.getUILanguage()));
   applyTranslations(document);
   render();

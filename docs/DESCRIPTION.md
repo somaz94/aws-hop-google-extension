@@ -26,14 +26,14 @@ Account guard
 
 Your accounts, your labels
 - Free-form tags (prod, qa, a project name), a color per project and a protected flag
-- Type to filter in the popup, then arrow keys and Enter; Alt+Shift+A opens it
+- Type to filter in the popup, then arrow keys and Enter; Alt+Shift+A opens it. Recently opened accounts come first, and protected accounts can be set to need a second Enter
 - Import from ~/.aws/config, one entry per account however many profiles point at it, from an aws-extend-switch-roles configuration, or from a JSON export
 - A ready-to-copy command for macOS, Windows (PowerShell) and Linux that looks up the account ID of every AWS CLI profile
 - Accounts sync across your Chrome browsers
 - English and Korean
 
 Privacy
-- Stores only the account names, account IDs, role names, portal URLs and labels you enter, in Chrome sync storage
+- Stores only the account names, account IDs, role names, portal URLs and labels you enter, in Chrome sync storage; the recently opened list stays on the browser
 - No network requests, no analytics, no server
 - Open source: https://github.com/somaz94/aws-hop-google-extension
 
@@ -71,7 +71,7 @@ Switch between AWS console accounts and show which account each AWS console tab 
 `storage`
 
 ```text
-Saves the user's account list (account names, account IDs or aliases, role names, portal URLs, tags, groups and colors) and settings in chrome.storage.sync, so the popup can list them and they sync between the user's own browsers. No password, access key, session token or cookie is ever stored.
+Saves the user's account list (account names, account IDs or aliases, role names, portal URLs, tags, groups and colors) and settings in chrome.storage.sync, so the popup can list them and they sync between the user's own browsers. The IDs of the last five accounts opened from the popup are kept in chrome.storage.local on that browser only, to list them first; turning the setting off deletes them. No password, access key, session token or cookie is ever stored.
 ```
 
 `activeTab`

@@ -8,7 +8,7 @@ It never stores a password, an access key or a session token. Every sign-in stil
 
 ## Features
 
-- **One popup for every account**: type to filter, arrow keys and Enter to open, accounts grouped by project
+- **One popup for every account**: type to filter, arrow keys and Enter to open, accounts grouped by project, the ones you opened last at the top
 - **Four sign-in methods**: IAM user sign-in, Switch Role, IAM Identity Center and any custom URL, each a self-contained module, so a new method is one file
 - **Your own labels**: a free-form tag per account (`prod`, `qa`, a project name, whatever fits), a color shared by each project, and a protected flag for accounts where a mistake is costly
 - **Account guard**: a colored stripe and label on every console page, plus a red frame and a tab-title prefix for protected accounts
@@ -88,6 +88,8 @@ git clone https://github.com/somaz94/aws-hop-google-extension.git
 3. Open the popup with the toolbar icon or `Alt+Shift+A` (change it at `chrome://extensions/shortcuts`)
 4. Type to filter, then press Enter or click
 
+Once the list is longer than five accounts, the popup starts with the ones you opened most recently on this browser; turn it off in the settings, which also forgets the list. Another setting makes a protected account wait for a second Enter or click before it opens.
+
 The popup opens accounts in a new tab by default. Shift, Ctrl or Cmd with Enter or a click, or a middle click, opens in the other place; the default can be switched in the options. The language setting offers the browser language, English or Korean.
 
 <br/>
@@ -152,7 +154,7 @@ Paste the configuration from its Configure page into the Import box. It is told 
 
 | Permission | Why |
 |---|---|
-| `storage` | Keeps your account list and settings in Chrome sync storage |
+| `storage` | Keeps your account list and settings in Chrome sync storage, and the recently opened accounts in local storage on this browser |
 | `activeTab` | Reads the address of the current tab when you open the popup, to mark the account you are in |
 | Access to `*.console.aws.amazon.com` | Runs the account guard on console pages |
 

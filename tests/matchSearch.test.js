@@ -1,7 +1,7 @@
 import { describe, test, expect } from '@jest/globals';
 import { matchProfile, normalizeRoleName } from '../src/lib/match.js';
 import { normalizeProfile } from '../src/lib/profile.js';
-import { filterProfiles, groupProfiles, moveSelection, resolveOpenTarget } from '../src/lib/search.js';
+import { filterProfiles, groupProfiles, moveSelection, needsConfirmation, popupSections, resolveOpenTarget } from '../src/lib/search.js';
 
 let next = 0;
 const make = (input) => normalizeProfile(input, { idFactory: () => `id-${next++}` });
@@ -90,6 +90,37 @@ describe('groupProfiles', () => {
   test('groups in order of first appearance', () => {
     expect(groupProfiles([shopProdAdmin, sandbox, shopDev]).map(({ group, profiles }) => [group, profiles.length]))
       .toEqual([['Shop', 2], ['', 1]]);
+  });
+});
+
+describe('popupSections', () => {
+  test('lists the groups while browsing', () => {
+    expect(popupSections(all)).toEqual(groupProfiles(all));
+  });
+
+  test('puts the recent accounts first, still listing them in their group', () => {
+    const sections = popupSections(all, { recent: [sandbox, shopDev] });
+    expect(sections[0]).toEqual({ group: '', recent: true, profiles: [sandbox, shopDev] });
+    expect(sections.slice(1)).toEqual(groupProfiles(all));
+  });
+
+  test('searching shows one ranked list and no recent section', () => {
+    expect(popupSections(all, { query: ' dev ', recent: [sandbox] })).toEqual([{ group: '', profiles: filterProfiles(all, 'dev') }]);
+  });
+});
+
+describe('needsConfirmation', () => {
+  const on = { confirmGuarded: true };
+
+  test('asks once for a protected account when the setting is on', () => {
+    expect(needsConfirmation(shopProdAdmin, on, null)).toBe(true);
+    expect(needsConfirmation(shopProdAdmin, on, shopDev.id)).toBe(true);
+    expect(needsConfirmation(shopProdAdmin, on, shopProdAdmin.id)).toBe(false);
+  });
+
+  test('never asks for other accounts or with the setting off', () => {
+    expect(needsConfirmation(shopDev, on, null)).toBe(false);
+    expect(needsConfirmation(shopProdAdmin, { confirmGuarded: false }, null)).toBe(false);
   });
 });
 

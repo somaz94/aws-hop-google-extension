@@ -42,11 +42,26 @@ export function groupProfiles(profiles) {
   return [...groups].map(([group, members]) => ({ group, profiles: members }));
 }
 
+/**
+ * The popup's sections: one ranked list while searching; otherwise the recently opened accounts
+ * (marked `recent`, and listed again in their group) followed by the groups.
+ */
+export function popupSections(profiles, { query = '', recent = [] } = {}) {
+  if (String(query).trim()) return [{ group: '', profiles: filterProfiles(profiles, query) }];
+  const groups = groupProfiles(profiles);
+  return recent.length ? [{ group: '', recent: true, profiles: recent }, ...groups] : groups;
+}
+
 /** Moves a list selection by `delta`, wrapping at both ends; -1 when the list is empty. */
 export function moveSelection(index, delta, length) {
   if (length <= 0) return -1;
   if (index < 0) return delta > 0 ? 0 : length - 1;
   return (((index + delta) % length) + length) % length;
+}
+
+/** True when opening `profile` must wait for a second Enter or click, because it is protected and not yet confirmed. */
+export function needsConfirmation(profile, settings, confirmingId) {
+  return Boolean(settings.confirmGuarded && profile.guarded && confirmingId !== profile.id);
 }
 
 /** A modifier key (Shift, Ctrl, Cmd, middle click) opens the profile where the setting would not. */

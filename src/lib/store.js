@@ -12,6 +12,8 @@ export const DEFAULT_SETTINGS = Object.freeze({
   guardEnabled: true,
   guardShowUnregistered: true,
   guardTitlePrefix: true,
+  showRecent: true,
+  confirmGuarded: false,
 });
 
 export const OPEN_IN = Object.freeze(['new-tab', 'current-tab']);
@@ -23,7 +25,7 @@ export function normalizeSettings(raw) {
   if (!raw || typeof raw !== 'object') return settings;
   if (LANGUAGE_SETTINGS.includes(raw.language)) settings.language = raw.language;
   if (OPEN_IN.includes(raw.openIn)) settings.openIn = raw.openIn;
-  for (const key of ['guardEnabled', 'guardShowUnregistered', 'guardTitlePrefix']) {
+  for (const key of ['guardEnabled', 'guardShowUnregistered', 'guardTitlePrefix', 'showRecent', 'confirmGuarded']) {
     if (typeof raw[key] === 'boolean') settings[key] = raw[key];
   }
   return settings;

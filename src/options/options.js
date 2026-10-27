@@ -2,6 +2,7 @@ import { applyTranslations, richText } from '../i18n/dom.js';
 import { resolveLanguage, setLanguage, t } from '../i18n/index.js';
 import { formatAccountId } from '../lib/account.js';
 import { buildProfileUrl, normalizeProfile, profileAccount, profileColor, validateProfile } from '../lib/profile.js';
+import { createRecentStore } from '../lib/recent.js';
 import { createStore } from '../lib/store.js';
 import { SUGGESTED_TAGS } from '../lib/tag.js';
 import { accountIdCommand, CLI_SHELLS, getShell, shellForPlatform } from '../importers/accountIdCommand.js';
@@ -381,7 +382,7 @@ $('export').addEventListener('click', () => {
 
 /* ---------- settings and language ---------- */
 
-const SETTING_INPUTS = ['language', 'openIn', 'guardEnabled', 'guardShowUnregistered', 'guardTitlePrefix'];
+const SETTING_INPUTS = ['language', 'openIn', 'showRecent', 'confirmGuarded', 'guardEnabled', 'guardShowUnregistered', 'guardTitlePrefix'];
 
 function applyLanguage(settings) {
   setLanguage(resolveLanguage(settings.language, chrome.i18n.getUILanguage()));
@@ -407,6 +408,8 @@ for (const key of SETTING_INPUTS) {
     const input = $(`setting-${key}`);
     settings[key] = input.type === 'checkbox' ? input.checked : input.value;
     await store.saveSettings(settings);
+    // Turning the recent list off also forgets it, so nothing is kept for a feature that is off.
+    if (key === 'showRecent' && !settings.showRecent) await createRecentStore().clear();
   });
 }
 

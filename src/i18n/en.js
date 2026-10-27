@@ -74,6 +74,8 @@ export default Object.freeze({
   'popup.addThis': 'Add',
   'popup.addThisTitle': 'Add this account',
   'popup.guarded': 'Protected account',
+  'popup.recent': 'Recent',
+  'popup.confirmOpen': 'Protected account: press Enter or click again to open',
 
   'options.title': 'AWS Hop settings',
   'options.subtitle': 'Accounts are stored in Chrome sync storage.\nNo passwords or access keys are ever stored.',
@@ -115,6 +117,8 @@ export default Object.freeze({
   'options.openIn.new': 'A new tab',
   'options.openIn.current': 'The current tab',
   'options.openInHelp': 'Shift, Ctrl or Cmd (or a middle click) opens in the other one.',
+  'options.showRecent': 'List recently opened accounts at the top of the popup',
+  'options.confirmGuarded': 'Ask again before opening a protected account from the popup',
   'options.guardEnabled': 'Show the account guard on AWS console pages',
   'options.guardShowUnregistered': 'Also mark accounts that are not in my list',
   'options.guardTitlePrefix': 'Prefix tab titles of protected accounts with the account name',

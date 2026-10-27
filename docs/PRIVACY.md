@@ -13,6 +13,7 @@ Only what you enter on the options page or import:
 - IAM role names, IAM Identity Center permission set names and access portal URLs
 - custom sign-in URLs
 - your AWS Hop settings
+- which of your accounts you opened most recently (up to five, by their AWS Hop entry), unless you turn the recent list off
 
 AWS Hop never asks for, reads or stores passwords, access keys, session tokens or cookies.
 
@@ -20,7 +21,7 @@ AWS Hop never asks for, reads or stores passwords, access keys, session tokens o
 
 ## Where it is stored
 
-In `chrome.storage.sync`. Chrome keeps it in your browser profile and, if you are signed in to Chrome with sync turned on, syncs it to your other browsers through your Google account. AWS Hop has no server and makes no network requests.
+In `chrome.storage.sync`, except the recently opened list, which stays in `chrome.storage.local` on that one browser and is deleted when you turn the recent list off. Chrome keeps it in your browser profile and, if you are signed in to Chrome with sync turned on, syncs it to your other browsers through your Google account. AWS Hop has no server and makes no network requests.
 
 <br/>
 

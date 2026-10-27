@@ -1,0 +1,126 @@
+import { describe, test, expect, jest } from '@jest/globals';
+import { createStore, DEFAULT_SETTINGS, normalizeSettings, profilesFromItems } from '../src/lib/store.js';
+import { createFakeStorage } from './helpers/fakeStorage.js';
+
+const profile = (id, name = id) => ({ id, name, provider: 'iam-user', env: 'other', color: null, group: '', fields: { account: '111122223333' } });
+
+function setup(initial) {
+  const storage = createFakeStorage(initial);
+  return { storage, store: createStore({ area: storage.area, onChanged: storage.onChanged }) };
+}
+
+describe('profiles', () => {
+  test('an empty store has no profiles', async () => {
+    expect(await setup().store.loadProfiles()).toEqual([]);
+  });
+
+  test('saveProfile keeps one item per profile and appends to the order once', async () => {
+    const { store, storage } = setup();
+    await store.saveProfile(profile('a'));
+    await store.saveProfile(profile('b'));
+    await store.saveProfile(profile('a', 'renamed'));
+    expect(storage.data.profileOrder).toEqual(['a', 'b']);
+    expect(storage.data['profile:a'].name).toBe('renamed');
+    expect((await store.loadProfiles()).map((p) => p.id)).toEqual(['a', 'b']);
+  });
+
+  test('deleteProfile removes the item and its place in the order', async () => {
+    const { store, storage } = setup();
+    await store.replaceAll([profile('a'), profile('b')]);
+    await store.deleteProfile('a');
+    expect(storage.data).not.toHaveProperty('profile:a');
+    expect(storage.data.profileOrder).toEqual(['b']);
+  });
+
+  test('deleteProfile and saveProfile cope with a missing order', async () => {
+    const { store, storage } = setup({ 'profile:a': profile('a') });
+    await store.deleteProfile('a');
+    expect(storage.data.profileOrder).toEqual([]);
+    await store.saveProfile(profile('b'));
+    expect(storage.data.profileOrder).toEqual(['b']);
+  });
+
+  test('reorder rewrites the order only', async () => {
+    const { store } = setup();
+    await store.replaceAll([profile('a'), profile('b')]);
+    await store.reorder(['b', 'a']);
+    expect((await store.loadProfiles()).map((p) => p.id)).toEqual(['b', 'a']);
+  });
+
+  test('replaceAll drops profiles that are not in the new list', async () => {
+    const { store, storage } = setup();
+    await store.replaceAll([profile('a'), profile('b')]);
+    await store.replaceAll([profile('c')]);
+    expect(Object.keys(storage.data).sort()).toEqual(['profile:c', 'profileOrder']);
+  });
+
+  test('replaceAll with nothing stale skips the remove call', async () => {
+    const { store, storage } = setup();
+    const remove = jest.spyOn(storage.area, 'remove');
+    await store.replaceAll([profile('a')]);
+    expect(remove).not.toHaveBeenCalled();
+  });
+});
+
+describe('profilesFromItems', () => {
+  test('orders by profileOrder and appends unordered profiles', () => {
+    const items = {
+      profileOrder: ['b', 'gone', 'a'],
+      'profile:a': profile('a'),
+      'profile:b': profile('b'),
+      'profile:c': profile('c'),
+      'profile:broken': 'not an object',
+      settings: {},
+    };
+    expect(profilesFromItems(items).map((p) => p.id)).toEqual(['b', 'a', 'c']);
+  });
+
+  test('ignores a malformed order', () => {
+    expect(profilesFromItems({ profileOrder: 'a', 'profile:a': profile('a') }).map((p) => p.id)).toEqual(['a']);
+  });
+});
+
+describe('settings', () => {
+  test('defaults when nothing is stored', async () => {
+    expect(await setup().store.loadSettings()).toEqual(DEFAULT_SETTINGS);
+  });
+
+  test('round-trips valid values and drops invalid ones', async () => {
+    const { store } = setup();
+    await store.saveSettings({ openIn: 'current-tab', guardEnabled: false, guardTitlePrefix: 'yes', extra: 1 });
+    expect(await store.loadSettings()).toEqual({ ...DEFAULT_SETTINGS, openIn: 'current-tab', guardEnabled: false });
+  });
+
+  test('normalizeSettings ignores junk', () => {
+    expect(normalizeSettings(null)).toEqual(DEFAULT_SETTINGS);
+    expect(normalizeSettings({ openIn: 'popup' })).toEqual(DEFAULT_SETTINGS);
+  });
+});
+
+describe('onChange', () => {
+  test('reports which kind of data changed, for its own area only', async () => {
+    const { store, storage } = setup();
+    const listener = jest.fn();
+    const unsubscribe = store.onChange(listener);
+
+    await store.saveProfile(profile('a'));
+    await store.saveSettings({});
+    storage.emit({ unrelated: {} });
+    expect(listener.mock.calls.map(([flags]) => flags)).toEqual([
+      { profiles: true, settings: false },
+      { profiles: false, settings: true },
+    ]);
+
+    unsubscribe();
+    expect(storage.listenerCount()).toBe(0);
+  });
+
+  test('ignores changes from another storage area', () => {
+    const storage = createFakeStorage({}, 'local');
+    const store = createStore({ area: storage.area, onChanged: storage.onChanged });
+    const listener = jest.fn();
+    store.onChange(listener);
+    storage.emit({ settings: {} });
+    expect(listener).not.toHaveBeenCalled();
+  });
+});

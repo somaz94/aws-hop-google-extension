@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AWS Hop</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="bar">
+    <input id="search" type="search" placeholder="Search accounts" autocomplete="off" spellcheck="false" aria-label="Search accounts" aria-controls="list">
+    <button id="open-options" class="icon-btn" type="button" title="Manage accounts" aria-label="Manage accounts">⚙</button>
+  </header>
+
+  <div id="current" class="current" hidden></div>
+
+  <ul id="list" class="list" role="listbox" aria-label="Accounts"></ul>
+
+  <div id="empty" class="empty" hidden>
+    <p>No accounts yet.</p>
+    <button id="add-first" class="primary" type="button">Add your first account</button>
+  </div>
+  <p id="no-match" class="empty" hidden>No account matches.</p>
+
+  <footer class="hint">↑↓ select · Enter open · Shift+Enter other tab</footer>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

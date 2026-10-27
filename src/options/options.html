@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AWS Hop settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main>
+    <header class="page-head">
+      <img src="../../icons/icon48.png" width="40" height="40" alt="">
+      <div>
+        <h1>AWS Hop</h1>
+        <p class="muted">Accounts are stored in Chrome sync storage. No passwords or access keys are ever stored.</p>
+      </div>
+    </header>
+
+    <section>
+      <div class="section-head">
+        <h2>Accounts</h2>
+        <button id="add" class="primary" type="button">Add account</button>
+      </div>
+      <ul id="profile-list" class="profile-list"></ul>
+      <p id="no-profiles" class="muted" hidden>No accounts yet. Add one, or import your <code>~/.aws/config</code> below.</p>
+    </section>
+
+    <section>
+      <h2>Import</h2>
+      <p class="muted">
+        Paste an AWS Hop export (JSON) or an AWS CLI config file. <code>sso_*</code> profiles become IAM Identity Center
+        links, <code>role_arn</code> profiles become Switch Role, and <code>aws_account_id</code> profiles become IAM user
+        sign-in. Optional <code>env</code> and <code>color</code> keys are read too.
+      </p>
+      <textarea id="import-text" rows="8" spellcheck="false" placeholder="[profile shop-prod]&#10;role_arn = arn:aws:iam::111122223333:role/Admin&#10;env = prod"></textarea>
+      <div class="actions">
+        <label class="file-btn">Load file<input id="import-file" type="file" accept=".json,.ini,.txt,.cfg,text/plain,application/json" hidden></label>
+        <span class="spacer"></span>
+        <button id="import-merge" type="button">Merge into my accounts</button>
+        <button id="import-replace" class="danger" type="button">Replace all accounts</button>
+      </div>
+      <div id="import-result" class="result" hidden></div>
+    </section>
+
+    <section>
+      <h2>Export</h2>
+      <p class="muted">Download every account as JSON, to back up or move to a browser that does not sync.</p>
+      <button id="export" type="button">Export accounts</button>
+    </section>
+
+    <section>
+      <h2>Settings</h2>
+      <label class="field">
+        <span>Open accounts in</span>
+        <select id="setting-openIn">
+          <option value="new-tab">A new tab</option>
+          <option value="current-tab">The current tab</option>
+        </select>
+        <small class="muted">Shift, Ctrl or Cmd (or a middle click) opens in the other one.</small>
+      </label>
+      <label class="check"><input id="setting-guardEnabled" type="checkbox"> Show the account guard on AWS console pages</label>
+      <label class="check"><input id="setting-guardShowUnregistered" type="checkbox"> Also mark accounts that are not in my list</label>
+      <label class="check"><input id="setting-guardTitlePrefix" type="checkbox"> Prefix production tab titles with [PROD]</label>
+    </section>
+  </main>
+
+  <dialog id="editor">
+    <form id="editor-form" novalidate>
+      <h2 id="editor-title">Add account</h2>
+
+      <label class="field">
+        <span>Name</span>
+        <input name="name" maxlength="64" autocomplete="off" placeholder="shop-prod">
+        <small class="error" data-error-for="name"></small>
+      </label>
+
+      <label class="field">
+        <span>Sign-in method</span>
+        <select name="provider"></select>
+        <small id="provider-help" class="muted"></small>
+        <small class="error" data-error-for="provider"></small>
+      </label>
+
+      <div id="provider-fields"></div>
+
+      <div class="row-2">
+        <label class="field">
+          <span>Environment</span>
+          <select name="env"></select>
+        </label>
+        <label class="field">
+          <span>Group</span>
+          <input name="group" maxlength="40" autocomplete="off" placeholder="Optional">
+          <small class="error" data-error-for="group"></small>
+        </label>
+      </div>
+
+      <div class="color-row">
+        <label class="check"><input name="useEnvColor" type="checkbox" checked> Use the environment color</label>
+        <input name="color" type="color" aria-label="Custom color">
+      </div>
+
+      <p class="preview"><span class="muted">Opens</span> <code id="url-preview">—</code></p>
+
+      <div class="actions">
+        <small class="error" data-error-for="form"></small>
+        <span class="spacer"></span>
+        <button id="editor-cancel" type="button">Cancel</button>
+        <button class="primary" type="submit">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>

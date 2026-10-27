@@ -1,0 +1,20 @@
+{
+  "name": "aws-hop-google-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Chrome extension for switching AWS console accounts, with a production guard",
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/.bin/jest --maxWorkers=2",
+    "test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --maxWorkers=2 --coverage",
+    "lint": "eslint src/ tests/",
+    "lint:fix": "eslint src/ tests/ --fix"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.0",
+    "@jest/globals": "^30.5.2",
+    "eslint": "^10.13.0",
+    "jest": "^30.5.2",
+    "jest-environment-jsdom": "^30.5.2"
+  }
+}

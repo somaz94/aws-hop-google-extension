@@ -12,7 +12,7 @@ It never stores a password, an access key or a session token. Every sign-in stil
 - **Four sign-in methods**: IAM user sign-in, Switch Role, IAM Identity Center and any custom URL, each a self-contained module, so a new method is one file
 - **Your own labels**: a free-form tag per account (`prod`, `qa`, a project name, whatever fits), a color shared by each project, and a protected flag for accounts where a mistake is costly
 - **Account guard**: a colored stripe and label on every console page, plus a red frame and a tab-title prefix for protected accounts
-- **Import** from `~/.aws/config` (one entry per account, however many profiles point at it) or a JSON export; accounts sync across your Chrome browsers
+- **Import** from `~/.aws/config` (one entry per account, however many profiles point at it), an [aws-extend-switch-roles](https://github.com/tilfinltd/aws-extend-switch-roles) configuration or a JSON export; accounts sync across your Chrome browsers
 - **English and Korean**, following the browser language or chosen in the settings
 
 <br/>
@@ -125,6 +125,24 @@ source_profile = default
 tag = dev
 group = Shop
 ```
+
+<br/>
+
+## Moving from aws-extend-switch-roles
+
+Paste the configuration from its Configure page into the Import box. It is told apart from `~/.aws/config` by the keys only that extension uses (`role_name`, `target_role_name`, `aws_account_alias`) or by profile sections without the `profile ` prefix.
+
+| Profile | Becomes |
+|---|---|
+| A target role: `role_arn`, or `aws_account_id` with `role_name` | Switch Role, grouped under its `source_profile` |
+| A target with `aws_account_id` only, whose base account sets `target_role_name` | Switch Role with that role |
+| A base account (named by another profile's `source_profile`) | IAM user sign-in, heading its own group |
+
+`color` is kept. `region`, `image` and `target_region` have no equivalent and are ignored. A base account with `role_name` signs in through a federated role whose method AWS Hop cannot tell, so it is skipped with a note; add it with the sign-in method you use.
+
+<br/>
+
+## Merge, replace and export
 
 **Merge** adds new accounts and updates ones with the same name and sign-in method. **Replace** swaps the whole list. **Export** downloads every account as JSON.
 

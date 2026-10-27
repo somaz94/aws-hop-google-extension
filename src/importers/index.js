@@ -1,5 +1,6 @@
 import { t } from '../i18n/index.js';
 import { normalizeProfile, profileTarget, validateProfile } from '../lib/profile.js';
+import { looksLikeAesr, profilesFromAesr } from './aesr.js';
 import { profilesFromAwsConfig } from './awsConfig.js';
 import { profilesFromJson } from './json.js';
 
@@ -7,11 +8,15 @@ import { profilesFromJson } from './json.js';
 const PARSERS = Object.freeze({
   json: { parse: profilesFromJson, dedupe: false },
   'aws-config': { parse: profilesFromAwsConfig, dedupe: true },
+  aesr: { parse: profilesFromAesr, dedupe: true },
 });
 
 export const IMPORT_FORMATS = Object.freeze(Object.keys(PARSERS));
 
-/** `{` is always JSON; `[` is JSON only if it parses, since `[profile x]` also opens an INI file. */
+/**
+ * `{` is always JSON; `[` is JSON only if it parses, since `[profile x]` also opens an INI file.
+ * An INI file is an aws-extend-switch-roles config when it uses that extension's own keys.
+ */
 export function detectFormat(text) {
   const trimmed = String(text ?? '').trimStart();
   if (trimmed.startsWith('{')) return 'json';
@@ -20,10 +25,10 @@ export function detectFormat(text) {
       JSON.parse(trimmed);
       return 'json';
     } catch {
-      return 'aws-config';
+      // An INI file; decided below.
     }
   }
-  return 'aws-config';
+  return looksLikeAesr(trimmed) ? 'aesr' : 'aws-config';
 }
 
 /** Negative when `a` is the better name to keep: any name over `default`, then the shorter (`shop` over `terraform-shop`). */

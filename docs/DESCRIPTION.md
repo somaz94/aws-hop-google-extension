@@ -27,7 +27,7 @@ Account guard
 Your accounts, your labels
 - Free-form tags (prod, qa, a project name), a color per project and a protected flag
 - Type to filter in the popup, then arrow keys and Enter; Alt+Shift+A opens it
-- Import from ~/.aws/config, one entry per account however many profiles point at it, or from a JSON export
+- Import from ~/.aws/config, one entry per account however many profiles point at it, from an aws-extend-switch-roles configuration, or from a JSON export
 - A ready-to-copy command for macOS, Windows (PowerShell) and Linux that looks up the account ID of every AWS CLI profile
 - Accounts sync across your Chrome browsers
 - English and Korean

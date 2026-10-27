@@ -1,6 +1,6 @@
 # AWS Hop
 
-A Chrome extension for hopping between AWS console accounts, with a production guard that shows which account the current tab is in.
+A Chrome extension for hopping between AWS console accounts, with a guard on every console page that shows which account the tab is in and marks the ones you must be careful with.
 
 It never stores a password, an access key or a session token. Every sign-in still happens on AWS's own pages; AWS Hop only knows where to send you.
 
@@ -8,10 +8,12 @@ It never stores a password, an access key or a session token. Every sign-in stil
 
 ## Features
 
-- **One popup for every account**: type to filter, arrow keys and Enter to open, groups for related accounts
+- **One popup for every account**: type to filter, arrow keys and Enter to open, accounts grouped by project
 - **Four sign-in methods**: IAM user sign-in, Switch Role, IAM Identity Center and any custom URL, each a self-contained module, so a new method is one file
-- **Production guard**: a colored stripe, a label with the account and, for production, a frame around the page and a `[PROD]` tab title
-- **Import** from `~/.aws/config` or a JSON export; accounts sync across your Chrome browsers
+- **Your own labels**: a free-form tag per account (`prod`, `qa`, a project name, whatever fits), a color shared by each project, and a protected flag for accounts where a mistake is costly
+- **Account guard**: a colored stripe and label on every console page, plus a red frame and a tab-title prefix for protected accounts
+- **Import** from `~/.aws/config` (one entry per account, however many profiles point at it) or a JSON export; accounts sync across your Chrome browsers
+- **English and Korean**, following the browser language or chosen in the settings
 
 <br/>
 
@@ -30,13 +32,28 @@ With the console's [multi-session support](https://docs.aws.amazon.com/awsconsol
 
 <br/>
 
-## Production guard
+## Tags, groups and protected accounts
+
+Environments differ from project to project, so AWS Hop does not impose any. Each account has:
+
+| Setting | What it does |
+|---|---|
+| **Tag** | A short label on the popup badge and the console label, such as `prod`, `qa` or `dr`. Tags you have used before are suggested |
+| **Group** | Lists related accounts together under one heading, usually a project |
+| **Color** | Picked automatically from the group, or from the first word of the name without one, so `shop-prod` and `shop-dev` share a color. You can choose your own |
+| **Protected** | Frames the console in red and prefixes the tab title with the account name. Turn it on for every account where a mistake is costly; there can be as many as you like, and the name prefix keeps their tabs apart |
+
+The tag and the protected flag can be changed straight from the account list in the options.
+
+<br/>
+
+## Account guard
 
 On every `*.console.aws.amazon.com` page, AWS Hop looks up the account you are in and draws:
 
 - a stripe across the top and a label in the lower left, in the account's color (click the label to shrink it to a dot; hover it to see where the account was detected from)
-- for accounts marked **Production**, a frame around the whole page and a `[PROD]` prefix on the tab title
-- for accounts that are not in your list, a gray "Unregistered account" label (can be turned off)
+- for protected accounts, a red frame around the whole page and the account name in front of the tab title, such as `[shop-prod] EC2`
+- for accounts that are not in your list, a gray label (can be turned off). The popup then offers **Add**, which opens the add dialog with the account ID filled in
 
 The account is read from the first source that answers, in this order:
 
@@ -67,11 +84,11 @@ git clone https://github.com/somaz94/aws-hop-google-extension.git
 ## Usage
 
 1. Open the options page (the gear in the popup) and add your accounts, or import them
-2. Give each account an environment; the environment decides the default color and whether the production guard frames the page
+2. Give accounts a tag and a group if they help, and tick **Protected** on the ones where a mistake is costly
 3. Open the popup with the toolbar icon or `Alt+Shift+A` (change it at `chrome://extensions/shortcuts`)
 4. Type to filter, then press Enter or click
 
-The popup opens accounts in a new tab by default. Shift, Ctrl or Cmd with Enter or a click, or a middle click, opens in the other place; the default can be switched in the options.
+The popup opens accounts in a new tab by default. Shift, Ctrl or Cmd with Enter or a click, or a middle click, opens in the other place; the default can be switched in the options. The language setting offers the browser language, English or Korean.
 
 <br/>
 
@@ -85,7 +102,11 @@ Paste the file into the Import box, or load it. Each profile is mapped by what i
 | `role_arn` | Switch Role |
 | `aws_account_id` | IAM user sign-in |
 
-Two optional keys are read as well, `env` (`prod`, `stage`, `dev`, `test` or `other`) and `color` (a hex color). Without `env`, the environment is guessed from the profile name. Profiles that only hold access keys carry no account ID, so they are listed as skipped with the reason; add `aws_account_id` to such a profile to import it.
+Three optional keys are read as well: `tag`, `group` and `color` (a hex color). `env`, the key's name before tags were free-form, is read as `tag`. A profile whose name or tag reads like production (`prod`, `live`) is marked protected.
+
+Profiles that sign in to the same place are imported once. When `default`, `shop` and `terraform-shop` all point at one account, only `shop` comes in: any name wins over `default`, then the shortest. Profiles for accounts already in your list are not added again, and importing again never overwrites the tags, groups, colors and protection you set in AWS Hop.
+
+Profiles that only hold access keys carry no account ID. The Import section has a command that looks every profile's account up with `aws sts get-caller-identity` and prints it in the import format; paste its output and merge.
 
 ```ini
 [sso-session corp]
@@ -96,14 +117,16 @@ sso_region = us-east-1
 sso_session = corp
 sso_account_id = 111122223333
 sso_role_name = AdministratorAccess
+group = Shop
 
 [profile shop-dev]
 role_arn = arn:aws:iam::444455556666:role/Developer
 source_profile = default
-env = dev
+tag = dev
+group = Shop
 ```
 
-**Merge** updates accounts that have the same name and sign-in method and adds the rest. **Replace** swaps the whole list. **Export** downloads every account as JSON.
+**Merge** adds new accounts and updates ones with the same name and sign-in method. **Replace** swaps the whole list. **Export** downloads every account as JSON.
 
 <br/>
 
@@ -113,7 +136,7 @@ env = dev
 |---|---|
 | `storage` | Keeps your account list and settings in Chrome sync storage |
 | `activeTab` | Reads the address of the current tab when you open the popup, to mark the account you are in |
-| Access to `*.console.aws.amazon.com` | Runs the production guard on console pages |
+| Access to `*.console.aws.amazon.com` | Runs the account guard on console pages |
 
 AWS Hop makes no network requests and has no access to the AWS sign-in pages.
 
@@ -121,13 +144,13 @@ AWS Hop makes no network requests and has no access to the AWS sign-in pages.
 
 ## Privacy
 
-AWS Hop stores only what you enter: account names, account IDs or aliases, role and permission set names, portal URLs, colors and groups. It stores them in `chrome.storage.sync`, which Chrome syncs between the browsers you are signed in to, and sends them nowhere else. See [Privacy](docs/PRIVACY.md).
+AWS Hop stores only what you enter: account names, account IDs or aliases, role and permission set names, portal URLs, tags, groups and colors. It stores them in `chrome.storage.sync`, which Chrome syncs between the browsers you are signed in to, and sends them nowhere else. See [Privacy](docs/PRIVACY.md).
 
 <br/>
 
 ## Documentation
 
-- [Development](docs/DEVELOPMENT.md): local setup, architecture, adding a sign-in method, publishing
+- [Development](docs/DEVELOPMENT.md): local setup, architecture, translations, adding a sign-in method, publishing
 - [Privacy](docs/PRIVACY.md): what is stored and where
 
 <br/>

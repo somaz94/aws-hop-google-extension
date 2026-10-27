@@ -5,8 +5,8 @@ import { describe, test, expect, beforeEach } from '@jest/globals';
 import { createTitleKeeper, HOST_TAG, renderGuard } from '../src/content/banner.js';
 
 const view = (overrides = {}) => ({
-  color: '#d13212', textColor: '#ffffff', label: 'PROD · shop', account: '1111-2222-3333', detectedFrom: 'console navigation',
-  frame: true, muted: false, titlePrefix: '[PROD] ',
+  color: '#0073bb', textColor: '#ffffff', label: 'prod · shop', account: '1111-2222-3333',
+  tooltip: 'AWS Hop: prod · shop (1111-2222-3333)', frame: true, muted: false, titlePrefix: '[shop] ',
   ...overrides,
 });
 
@@ -21,19 +21,20 @@ describe('renderGuard', () => {
   test('draws the stripe, frame and pill', () => {
     renderGuard(document, view());
     const host = document.querySelector(HOST_TAG);
-    expect(host.style.getPropertyValue('--color')).toBe('#d13212');
-    expect(root().querySelector('.label').textContent).toBe('PROD · shop');
+    expect(host.style.getPropertyValue('--color')).toBe('#0073bb');
+    expect(root().querySelector('.label').textContent).toBe('prod · shop');
     expect(root().querySelector('.account').textContent).toBe('1111-2222-3333');
     expect(root().querySelector('.stripe').hidden).toBe(false);
     expect(root().querySelector('.frame').hidden).toBe(false);
-    expect(root().querySelector('.pill').title).toBe('AWS Hop: PROD · shop (1111-2222-3333), detected from the console navigation. Click to minimize.');
+    expect(root().querySelector('.pill').title).toBe('AWS Hop: prod · shop (1111-2222-3333)');
+    expect(root().querySelector('style').textContent).toContain('inset 0 0 0 3px #d13212');
   });
 
   test('updates in place instead of adding a second guard', () => {
     renderGuard(document, view());
-    renderGuard(document, view({ label: 'DEV · shop', frame: false, muted: true }));
+    renderGuard(document, view({ label: 'shop-dev', frame: false, muted: true }));
     expect(document.querySelectorAll(HOST_TAG)).toHaveLength(1);
-    expect(root().querySelector('.label').textContent).toBe('DEV · shop');
+    expect(root().querySelector('.label').textContent).toBe('shop-dev');
     expect(root().querySelector('.frame').hidden).toBe(true);
     expect(root().querySelector('.stripe').hidden).toBe(true);
     expect(root().querySelector('.pill').classList.contains('muted')).toBe(true);

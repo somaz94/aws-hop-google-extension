@@ -31,21 +31,36 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://*.console.aws.amazon.com/*"],
-      "js": ["src/content/nav-bridge.js"],
+      "matches": [
+        "https://*.console.aws.amazon.com/*"
+      ],
+      "js": [
+        "src/content/nav-bridge.js"
+      ],
       "world": "MAIN",
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://*.console.aws.amazon.com/*"],
-      "js": ["src/content/loader.js"],
+      "matches": [
+        "https://*.console.aws.amazon.com/*"
+      ],
+      "js": [
+        "src/content/loader.js"
+      ],
       "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["src/content/*.js", "src/lib/*.js", "src/providers/*.js"],
-      "matches": ["https://*.console.aws.amazon.com/*"]
+      "resources": [
+        "src/content/*.js",
+        "src/i18n/*.js",
+        "src/lib/*.js",
+        "src/providers/*.js"
+      ],
+      "matches": [
+        "https://*.console.aws.amazon.com/*"
+      ]
     }
   ],
   "icons": {

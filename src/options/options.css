@@ -197,3 +197,34 @@ dialog {
 }
 
 dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+
+.profile.guarded { padding-left: 8px; box-shadow: inset 3px 0 0 #d13212; }
+.profile .tag-input { flex: none; width: 96px; padding: 3px 6px; font-size: 12px; }
+
+.inline-check {
+  display: flex;
+  flex: none;
+  gap: 4px;
+  align-items: center;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.check-help { margin: -4px 0 10px 24px; font-size: 12px; }
+
+.helper {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.helper summary { font-weight: 600; cursor: pointer; }
+
+.helper pre {
+  overflow-x: auto;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--bg);
+  font-size: 12px;
+}

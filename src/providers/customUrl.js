@@ -3,20 +3,19 @@ import { accountIdField, httpsUrlError } from './fields.js';
 
 export default {
   id: 'custom-url',
-  label: 'Custom URL (SAML or other IdP)',
+  label: 'provider.custom-url.label',
   short: 'URL',
-  description: 'Opens any https sign-in URL, such as an IdP-initiated SAML link from Okta, Entra ID or '
-    + 'Google Workspace. Add the account ID so the production guard can recognise the account.',
+  description: 'provider.custom-url.description',
   fields: [
     {
       key: 'url',
-      label: 'Sign-in URL',
+      label: 'field.url.label',
       required: true,
       type: 'url',
       placeholder: 'https://idp.example.com/app/aws/sso',
       validate: (value) => httpsUrlError(value),
     },
-    accountIdField({ required: false, help: 'Optional. Lets the production guard match this account.' }),
+    accountIdField({ required: false, help: 'field.accountId.guardHelp' }),
   ],
   example: { url: 'https://idp.example.com/app/aws/sso', accountId: '111122223333' },
   buildUrl({ url }) {

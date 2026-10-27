@@ -1,13 +1,17 @@
+import { applyTranslations, richText } from '../i18n/dom.js';
+import { resolveLanguage, setLanguage, t } from '../i18n/index.js';
 import { formatAccountId } from '../lib/account.js';
-import { ENVIRONMENTS, getEnvironment, inferEnv } from '../lib/env.js';
 import { buildProfileUrl, normalizeProfile, profileAccount, profileColor, validateProfile } from '../lib/profile.js';
 import { createStore } from '../lib/store.js';
+import { SUGGESTED_TAGS } from '../lib/tag.js';
+import { accountIdCommand } from '../importers/awsConfig.js';
 import { exportProfiles } from '../importers/json.js';
 import { importProfiles, mergeProfiles } from '../importers/index.js';
 import { getProvider, listProviders } from '../providers/index.js';
 
 const store = createStore();
 const $ = (id) => document.getElementById(id);
+const IS_MAC = /Mac/.test(navigator.userAgent);
 
 const editor = $('editor');
 const form = $('editor-form');
@@ -33,24 +37,43 @@ function option(value, label) {
 
 function metaLine(profile) {
   const account = profileAccount(profile);
-  return [getEnvironment(profile.env).label, getProvider(profile.provider)?.label, account && formatAccountId(account), profile.group]
-    .filter(Boolean)
-    .join(' · ');
+  const provider = getProvider(profile.provider);
+  return [provider && t(provider.label), account && formatAccountId(account), profile.group].filter(Boolean).join(' · ');
 }
 
-function toolButton(label, action, disabled = false) {
+function toolButton(label, action, { disabled = false, aria } = {}) {
   const button = element('button', '', label);
   button.type = 'button';
   button.dataset.action = action;
   button.disabled = disabled;
+  if (aria) button.setAttribute('aria-label', aria);
   return button;
+}
+
+function inlineControls(profile) {
+  const tag = element('input', 'tag-input');
+  tag.value = profile.tag;
+  tag.maxLength = 20;
+  tag.placeholder = t('editor.tag');
+  tag.setAttribute('list', 'tag-suggestions');
+  tag.setAttribute('aria-label', t('options.tagOf', { name: profile.name }));
+  tag.dataset.action = 'tag';
+
+  const guardLabel = element('label', 'inline-check');
+  const guarded = element('input');
+  guarded.type = 'checkbox';
+  guarded.checked = profile.guarded;
+  guarded.dataset.action = 'guarded';
+  guarded.setAttribute('aria-label', t('options.guardedOf', { name: profile.name }));
+  guardLabel.append(guarded, ` ${t('options.guardedShort')}`);
+  return [tag, guardLabel];
 }
 
 function renderList() {
   const list = $('profile-list');
   list.replaceChildren();
   profiles.forEach((profile, index) => {
-    const row = element('li', 'profile');
+    const row = element('li', profile.guarded ? 'profile guarded' : 'profile');
     row.dataset.id = profile.id;
     const dot = element('span', 'dot');
     dot.style.background = profileColor(profile);
@@ -58,16 +81,22 @@ function renderList() {
     main.append(element('div', 'name', profile.name), element('div', 'meta', metaLine(profile)));
     const tools = element('div', 'tools');
     tools.append(
-      toolButton('↑', 'up', index === 0),
-      toolButton('↓', 'down', index === profiles.length - 1),
-      toolButton('Edit', 'edit'),
-      toolButton('Duplicate', 'duplicate'),
-      toolButton('Delete', 'delete'),
+      toolButton('↑', 'up', { disabled: index === 0, aria: t('options.moveUp') }),
+      toolButton('↓', 'down', { disabled: index === profiles.length - 1, aria: t('options.moveDown') }),
+      toolButton(t('options.edit'), 'edit'),
+      toolButton(t('options.duplicate'), 'duplicate'),
+      toolButton(t('options.delete'), 'delete'),
     );
-    row.append(dot, main, tools);
+    row.append(dot, main, ...inlineControls(profile), tools);
     list.append(row);
   });
   $('no-profiles').hidden = profiles.length > 0;
+  renderTagSuggestions();
+}
+
+function renderTagSuggestions() {
+  const tags = new Set([...profiles.map((profile) => profile.tag).filter(Boolean), ...SUGGESTED_TAGS]);
+  $('tag-suggestions').replaceChildren(...[...tags].map((tag) => option(tag, '')));
 }
 
 async function reload() {
@@ -83,7 +112,16 @@ async function move(index, delta) {
   await reload();
 }
 
-$('profile-list').addEventListener('click', async (event) => {
+async function updateInline(profile, changes) {
+  const next = normalizeProfile({ ...profile, ...changes });
+  if (validateProfile(next).length) return renderList();
+  await store.saveProfile(next);
+  return reload();
+}
+
+const list = $('profile-list');
+
+list.addEventListener('click', async (event) => {
   const button = event.target.closest('button[data-action]');
   if (!button) return;
   const id = button.closest('.profile').dataset.id;
@@ -93,9 +131,9 @@ $('profile-list').addEventListener('click', async (event) => {
     case 'up': return move(index, -1);
     case 'down': return move(index, 1);
     case 'edit': return openEditor(profile);
-    case 'duplicate': return openEditor({ ...profile, id: null, name: `${profile.name} copy` });
+    case 'duplicate': return openEditor({ ...profile, id: null, name: t('options.copyName', { name: profile.name }) });
     case 'delete':
-      if (confirm(`Delete "${profile.name}"?`)) {
+      if (confirm(t('options.confirmDelete', { name: profile.name }))) {
         await store.deleteProfile(id);
         await reload();
       }
@@ -104,11 +142,23 @@ $('profile-list').addEventListener('click', async (event) => {
   }
 });
 
+// Inline edits save on change (blur or Enter for the tag), so the list never needs a separate save button.
+list.addEventListener('change', (event) => {
+  const action = event.target.dataset.action;
+  if (action !== 'tag' && action !== 'guarded') return;
+  const profile = profiles.find((p) => p.id === event.target.closest('.profile').dataset.id);
+  updateInline(profile, action === 'tag' ? { tag: event.target.value } : { guarded: event.target.checked });
+});
+
+list.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' && event.target.dataset.action === 'tag') event.target.blur();
+});
+
 /* ---------- editor ---------- */
 
 function renderProviderFields(provider, values = {}) {
   providerFields.replaceChildren();
-  $('provider-help').textContent = provider.description;
+  $('provider-help').textContent = t(provider.description);
   for (const field of provider.fields) {
     const label = element('label', 'field');
     const input = element('input');
@@ -116,10 +166,11 @@ function renderProviderFields(provider, values = {}) {
     input.type = field.type ?? 'text';
     input.autocomplete = 'off';
     input.spellcheck = false;
-    input.placeholder = field.placeholder ?? '';
+    input.placeholder = t(field.placeholder ?? '');
     input.value = values[field.key] ?? '';
-    label.append(element('span', '', field.required ? field.label : `${field.label} (optional)`), input);
-    if (field.help) label.append(element('small', 'muted', field.help));
+    const caption = field.required ? t(field.label) : t('editor.optional', { label: t(field.label) });
+    label.append(element('span', '', caption), input);
+    if (field.help) label.append(element('small', 'muted', t(field.help)));
     const error = element('small', 'error');
     error.dataset.errorFor = field.key;
     label.append(error);
@@ -127,20 +178,25 @@ function renderProviderFields(provider, values = {}) {
   }
 }
 
+function currentFieldValues() {
+  const values = {};
+  for (const [key, value] of new FormData(form)) {
+    if (key.startsWith('field:')) values[key.slice('field:'.length)] = value;
+  }
+  return values;
+}
+
 function readForm() {
   const data = new FormData(form);
-  const fields = {};
-  for (const [key, value] of data) {
-    if (key.startsWith('field:')) fields[key.slice('field:'.length)] = value;
-  }
   return normalizeProfile({
     id: editingId,
     name: data.get('name'),
     provider: data.get('provider'),
-    env: data.get('env'),
-    color: form.elements.useEnvColor.checked ? null : data.get('color'),
+    tag: data.get('tag'),
+    guarded: form.elements.guarded.checked,
+    color: form.elements.autoColor.checked ? null : data.get('color'),
     group: data.get('group'),
-    fields,
+    fields: currentFieldValues(),
   });
 }
 
@@ -154,22 +210,23 @@ function showErrors(errors) {
 
 function refreshPreview() {
   const profile = readForm();
-  form.elements.color.disabled = form.elements.useEnvColor.checked;
-  if (form.elements.useEnvColor.checked) form.elements.color.value = getEnvironment(profile.env).color;
+  form.elements.color.disabled = form.elements.autoColor.checked;
+  if (form.elements.autoColor.checked) form.elements.color.value = profileColor(profile);
   $('url-preview').textContent = validateProfile(profile).length ? '—' : buildProfileUrl(profile);
 }
 
 function openEditor(profile = null) {
   editingId = profile?.id ?? null;
-  $('editor-title').textContent = editingId ? 'Edit account' : 'Add account';
+  $('editor-title').textContent = editingId ? t('editor.edit') : t('editor.add');
   form.reset();
   const provider = getProvider(profile?.provider) ?? listProviders()[0];
   form.elements.name.value = profile?.name ?? '';
   form.elements.provider.value = provider.id;
-  form.elements.env.value = profile?.env ?? 'other';
+  form.elements.tag.value = profile?.tag ?? '';
   form.elements.group.value = profile?.group ?? '';
-  form.elements.useEnvColor.checked = !profile?.color;
-  form.elements.color.value = profile?.color ?? getEnvironment(profile?.env).color;
+  form.elements.guarded.checked = Boolean(profile?.guarded);
+  form.elements.autoColor.checked = !profile?.color;
+  if (profile?.color) form.elements.color.value = profile.color;
   renderProviderFields(provider, profile?.fields);
   showErrors([]);
   refreshPreview();
@@ -177,23 +234,18 @@ function openEditor(profile = null) {
   form.elements.name.focus();
 }
 
-form.elements.provider.append(...listProviders().map((provider) => option(provider.id, provider.label)));
-form.elements.env.append(...ENVIRONMENTS.map((env) => option(env.id, env.label)));
+function fillProviderSelect() {
+  const value = form.elements.provider.value;
+  form.elements.provider.replaceChildren(...listProviders().map((provider) => option(provider.id, t(provider.label))));
+  if (value) form.elements.provider.value = value;
+}
 
 form.elements.provider.addEventListener('change', () => {
   // Carry typed values over to the new method; `account` and `accountId` are the same thing to the user.
-  const values = {};
-  for (const [key, value] of new FormData(form)) {
-    if (key.startsWith('field:')) values[key.slice('field:'.length)] = value;
-  }
+  const values = currentFieldValues();
   values.account ||= values.accountId;
   values.accountId ||= values.account;
   renderProviderFields(getProvider(form.elements.provider.value), values);
-  refreshPreview();
-});
-
-form.elements.name.addEventListener('change', () => {
-  if (!editingId && form.elements.env.value === 'other') form.elements.env.value = inferEnv(form.elements.name.value);
   refreshPreview();
 });
 
@@ -209,7 +261,7 @@ form.addEventListener('submit', async (event) => {
     await store.saveProfile(profile);
   } catch (error) {
     // Sync storage rejects writes over its quota; keep the dialog open so nothing typed is lost.
-    showErrors([{ field: 'form', message: `Could not save: ${error.message}` }]);
+    showErrors([{ field: 'form', message: t('editor.saveFailed', { detail: error.message }) }]);
     return;
   }
   editor.close();
@@ -219,15 +271,23 @@ form.addEventListener('submit', async (event) => {
 $('editor-cancel').addEventListener('click', () => editor.close());
 $('add').addEventListener('click', () => openEditor());
 
+/** `#add=<account>` comes from the popup's "Add this account" on an unregistered console tab. */
+function openFromHash() {
+  const match = /^#add=(.+)$/.exec(location.hash);
+  if (!match) return;
+  history.replaceState(null, '', location.pathname);
+  openEditor({ provider: 'iam-user', fields: { account: decodeURIComponent(match[1]) } });
+}
+
 /* ---------- import / export ---------- */
 
 function showImportResult(message, skipped = [], isError = false) {
   const box = $('import-result');
   box.replaceChildren(element('div', '', message));
   if (skipped.length) {
-    const list = element('ul');
-    for (const { name, reason } of skipped) list.append(element('li', '', `${name}: ${reason}`));
-    box.append(element('div', 'muted', `Skipped ${skipped.length}:`), list);
+    const items = element('ul');
+    for (const { name, reason } of skipped) items.append(element('li', '', `${name}: ${reason}`));
+    box.append(element('div', 'muted', t('import.result.skipped', { count: skipped.length })), items);
   }
   box.classList.toggle('error', isError);
   box.hidden = false;
@@ -236,7 +296,7 @@ function showImportResult(message, skipped = [], isError = false) {
 function parseImport() {
   const text = $('import-text').value;
   if (!text.trim()) {
-    showImportResult('Paste a file or load one first.', [], true);
+    showImportResult(t('import.result.empty'), [], true);
     return null;
   }
   try {
@@ -251,7 +311,7 @@ async function applyImport(next, message, skipped) {
   try {
     await store.replaceAll(next);
   } catch (error) {
-    showImportResult(`Could not save: ${error.message}`, skipped, true);
+    showImportResult(t('editor.saveFailed', { detail: error.message }), skipped, true);
     return;
   }
   await reload();
@@ -262,14 +322,15 @@ $('import-merge').addEventListener('click', async () => {
   const result = parseImport();
   if (!result) return;
   const merged = mergeProfiles(profiles, result.profiles);
-  await applyImport(merged.profiles, `Added ${merged.added}, updated ${merged.updated}.`, result.skipped);
+  const message = t('import.result.merged', { added: merged.added, updated: merged.updated, existing: merged.existing.length });
+  await applyImport(merged.profiles, message, [...result.skipped, ...merged.existing]);
 });
 
 $('import-replace').addEventListener('click', async () => {
   const result = parseImport();
   if (!result) return;
-  if (!confirm(`Replace all ${profiles.length} accounts with the ${result.profiles.length} imported ones?`)) return;
-  await applyImport(result.profiles, `Replaced with ${result.profiles.length} accounts.`, result.skipped);
+  if (!confirm(t('import.confirmReplace', { current: profiles.length, incoming: result.profiles.length }))) return;
+  await applyImport(result.profiles, t('import.result.replaced', { count: result.profiles.length }), result.skipped);
 });
 
 $('import-file').addEventListener('change', async (event) => {
@@ -277,6 +338,17 @@ $('import-file').addEventListener('change', async (event) => {
   if (file) $('import-text').value = await file.text();
   event.target.value = '';
 });
+
+$('cli-copy').addEventListener('click', async () => {
+  await navigator.clipboard.writeText($('cli-command').textContent);
+  $('cli-copy').textContent = t('options.cliHelper.copied');
+  setTimeout(() => { $('cli-copy').textContent = t('options.cliHelper.copy'); }, 1500);
+});
+
+function renderCliHelper() {
+  $('cli-helper-text').replaceChildren(richText(document, t(IS_MAC ? 'options.cliHelper.mac' : 'options.cliHelper.other')));
+  $('cli-command').textContent = accountIdCommand({ copyToClipboard: IS_MAC });
+}
 
 $('export').addEventListener('click', () => {
   const blob = new Blob([exportProfiles(profiles)], { type: 'application/json' });
@@ -287,9 +359,17 @@ $('export').addEventListener('click', () => {
   setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 });
 
-/* ---------- settings ---------- */
+/* ---------- settings and language ---------- */
 
-const SETTING_INPUTS = ['openIn', 'guardEnabled', 'guardShowUnregistered', 'guardTitlePrefix'];
+const SETTING_INPUTS = ['language', 'openIn', 'guardEnabled', 'guardShowUnregistered', 'guardTitlePrefix'];
+
+function applyLanguage(settings) {
+  setLanguage(resolveLanguage(settings.language, chrome.i18n.getUILanguage()));
+  applyTranslations(document);
+  fillProviderSelect();
+  renderCliHelper();
+  renderList();
+}
 
 async function loadSettings() {
   const settings = await store.loadSettings();
@@ -298,6 +378,7 @@ async function loadSettings() {
     if (input.type === 'checkbox') input.checked = settings[key];
     else input.value = settings[key];
   }
+  applyLanguage(settings);
 }
 
 for (const key of SETTING_INPUTS) {
@@ -314,5 +395,11 @@ store.onChange(({ profiles: profilesChanged, settings }) => {
   if (settings) loadSettings();
 });
 
-reload();
-loadSettings();
+async function init() {
+  profiles = await store.loadProfiles();
+  await loadSettings();
+  $('cli-helper').open = profiles.length === 0;
+  openFromHash();
+}
+
+init();

@@ -30,12 +30,15 @@ Plain ES modules, loaded straight from `src/` with no bundler. Each directory ha
 | Directory | Role |
 |---|---|
 | `src/providers/` | One module per sign-in method, plus the registry in `index.js` |
-| `src/lib/` | The account model, storage, console account detection, matching and search. No UI and no Chrome API other than storage |
-| `src/importers/` | Parsers that turn `~/.aws/config` or JSON into accounts |
-| `src/content/` | The production guard on console pages |
+| `src/lib/` | The account model, tags and colors, storage, console account detection, matching and search. No UI and no Chrome API other than storage |
+| `src/importers/` | Parsers that turn `~/.aws/config` or JSON into accounts, de-duplication and merging |
+| `src/i18n/` | One message catalog per language, the lookup function and the DOM helper that fills `data-i18n` attributes |
+| `src/content/` | The account guard on console pages |
 | `src/popup/`, `src/options/` | The two extension pages; thin glue over `src/lib` |
 
-A stored account has a fixed set of common fields (`name`, `provider`, `env`, `color`, `group`) and a `fields` object whose keys are defined by its sign-in method. `normalizeProfile` drops keys the method does not declare, so nothing a method does not ask for is ever stored.
+A stored account has a fixed set of common fields (`name`, `provider`, `tag`, `guarded`, `color`, `group`) and a `fields` object whose keys are defined by its sign-in method. `normalizeProfile` drops keys the method does not declare, so nothing a method does not ask for is ever stored, and it reads the `env` field that older versions stored as a tag. The store normalizes every account it loads, so the pages never see an older shape.
+
+Two profiles are the same account to the importer when `profileTarget` says they sign in to the same place: the sign-in method plus its fields, or what the method's `targetOf` keeps of them. Names, tags and colors never count.
 
 Each account is a separate `chrome.storage.sync` item (`profile:<id>`) with the order kept in `profileOrder`. Sync storage limits a single item to 8 KB, so one array would cap the list at a few dozen accounts.
 
@@ -71,7 +74,7 @@ Detection relies on console internals that AWS does not document. If the guard s
 - The browser is driven over the DevTools protocol with Node's built-in `WebSocket`, so the test adds no dependency
 - It needs Node 22 or later and `openssl`
 
-The mock pages stand in for the console's navigation data and header markup, so a pass says the extension is wired correctly, not that AWS still renders its console the same way. That part is checked by hand on a real console; see the README's production guard section for what the label shows and how to read where an account was detected from.
+The mock pages stand in for the console's navigation data and header markup, so a pass says the extension is wired correctly, not that AWS still renders its console the same way. That part is checked by hand on a real console; see the README's account guard section for what the label shows and how to read where an account was detected from.
 
 <br/>
 
@@ -82,19 +85,36 @@ The mock pages stand in for the console's navigation data and header markup, so 
    | Key | Required | Purpose |
    |---|---|---|
    | `id` | yes | Stable identifier stored with every account; never rename it |
-   | `label`, `short`, `description` | yes | Shown in the options page and the popup |
+   | `label`, `description` | yes | Message keys (see Translations), shown in the options page |
+   | `short` | yes | Two to five capital letters for the popup, the same in every language |
    | `fields` | yes | The inputs the options page renders, see below |
    | `example` | yes | Valid field values; the contract test builds a URL from them |
    | `buildUrl(fields, { name, color })` | yes | Returns the https URL to open |
    | `accountOf(fields)` | yes | The canonical account ID or alias, or `null`; the guard matches on it |
    | `normalize(fields)` | no | Cross-field clean-up after each field's own `normalize` |
    | `roleOf(fields, { name })` | no | Role names the console may show for this account, to break ties |
+   | `targetOf(fields)` | no | The fields that decide where it signs in, when some are cosmetic (Switch Role drops the display name) |
 
-   Each field is `{ key, label, required, placeholder?, help?, type?, normalize?(value), validate?(value) }`. `validate` returns an error message or `null`, and only runs on non-empty values. Account inputs can reuse `accountRefField` and `accountIdField` from `src/providers/fields.js`.
+   Each field is `{ key, label, required, placeholder?, help?, type?, normalize?(value), validate?(value) }`. `label` and `help` are message keys; `placeholder` is a key or literal example text. `validate` returns an error message, built with `t()`, or `null`, and only runs on non-empty values. Account inputs can reuse `accountRefField` and `accountIdField` from `src/providers/fields.js`.
 
 2. Add it to the list in `src/providers/index.js`. The list order is the order of the options page dropdown.
 
-3. Run `make test`. `tests/providers.contract.test.js` checks every registered method, so the new one is covered there without new code; add method-specific cases to `tests/providers.test.js`.
+3. Add its message keys to every catalog in `src/i18n/`.
+
+4. Run `make test`. `tests/providers.contract.test.js` checks every registered method, including that its labels exist in every language, so the new one is covered there without new code; add method-specific cases to `tests/providers.test.js`.
+
+<br/>
+
+## Translations
+
+Every piece of text the user sees comes from `t(key, params)` in `src/i18n/index.js`, which looks the key up in the current language's catalog (`src/i18n/<language>.js`) and falls back to English. Placeholders are written `{name}`; text in backticks is rendered as `<code>` by `richText`, never parsed as HTML.
+
+- Static text in the HTML pages carries `data-i18n` (and `data-i18n-placeholder`, `-title`, `-aria-label` for attributes); `applyTranslations` fills it. The English text written inside the element is only a fallback
+- The language is the `language` setting: `auto` follows `chrome.i18n.getUILanguage()`, anything without a catalog falls back to English. Every page and the guard switch as soon as the setting changes
+- `tests/i18n.test.js` fails when a catalog is missing a key, or when a translation drops a placeholder or a code span
+- To add a language, add a catalog with every key, register it in `CATALOGS` and add an option to the language select on the options page
+
+Badge text such as provider `short` names stays the same in every language. The manifest name and description are English only, because localizing them needs a `_locales/` directory that the release packaging does not ship yet.
 
 <br/>
 
@@ -105,7 +125,7 @@ make bump-version VERSION=0.2.0
 make package     # writes dist/aws-hop.zip
 ```
 
-Upload the ZIP in the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole). The review asks why each permission is needed; the reasons are the Permissions table in the README. Host access justification, in short: the content script reads which AWS account the console tab is signed in to and draws a colored label, so users can tell production from other accounts. Link [Privacy](PRIVACY.md) as the privacy policy.
+Upload the ZIP in the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole). The review asks why each permission is needed; the reasons are the Permissions table in the README. Host access justification, in short: the content script reads which AWS account the console tab is signed in to and draws a colored label, so users can tell a protected account, such as production, from the others. Link [Privacy](PRIVACY.md) as the privacy policy.
 
 <br/>
 

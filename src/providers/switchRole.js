@@ -1,4 +1,5 @@
 import { normalizeAccount, parseRoleArn } from '../lib/account.js';
+import { t } from '../i18n/index.js';
 import { accountRefField, SIGNIN_HOST } from './fields.js';
 
 // The console stores path + role name in a cookie and rejects the switch above 64 characters.
@@ -8,29 +9,28 @@ const ROLE_NAME = /^[\w+=,.@\-/]+$/;
 
 export default {
   id: 'switch-role',
-  label: 'Switch Role',
+  label: 'provider.switch-role.label',
   short: 'ROLE',
-  description: 'Opens the Switch Role page prefilled with the account, role, display name and color. '
-    + 'You stay signed in to your source account and confirm the switch with one click.',
+  description: 'provider.switch-role.description',
   fields: [
-    accountRefField({ help: 'The account that owns the role. Pasting a role ARN into Role fills this in.' }),
+    accountRefField({ help: 'field.account.roleOwnerHelp' }),
     {
       key: 'roleName',
-      label: 'Role',
+      label: 'field.roleName.label',
       required: true,
       placeholder: 'OrganizationAccountAccessRole',
-      help: 'Role name with its path, if any (division/RoleName), or the full role ARN.',
+      help: 'field.roleName.help',
       validate: (value) => {
-        if (!ROLE_NAME.test(value)) return 'Only letters, digits and + = , . @ - _ / are allowed';
-        return value.length > ROLE_MAX ? `Path and role name must be ${ROLE_MAX} characters or fewer` : null;
+        if (!ROLE_NAME.test(value)) return t('error.roleChars');
+        return value.length > ROLE_MAX ? t('error.roleLength', { max: ROLE_MAX }) : null;
       },
     },
     {
       key: 'displayName',
-      label: 'Display name',
+      label: 'field.displayName.label',
       required: false,
-      placeholder: 'Defaults to the profile name',
-      validate: (value) => (value.length > DISPLAY_NAME_MAX ? `At most ${DISPLAY_NAME_MAX} characters` : null),
+      placeholder: 'field.displayName.placeholder',
+      validate: (value) => (value.length > DISPLAY_NAME_MAX ? t('error.maxLength', { max: DISPLAY_NAME_MAX }) : null),
     },
   ],
   example: { account: '111122223333', roleName: 'OrganizationAccountAccessRole' },
@@ -53,5 +53,9 @@ export default {
   },
   roleOf({ roleName, displayName }, { name }) {
     return [roleName.split('/').pop(), displayName || name];
+  },
+  // The display name is cosmetic; two profiles with the same account and role sign in to the same place.
+  targetOf({ account, roleName }) {
+    return { account: normalizeAccount(account), roleName };
   },
 };

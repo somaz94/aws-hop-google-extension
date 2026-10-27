@@ -1,7 +1,12 @@
-import { describe, test, expect } from '@jest/globals';
-import { parseIni, profilesFromAwsConfig } from '../src/importers/awsConfig.js';
+import { describe, test, expect, afterEach } from '@jest/globals';
+import { execFileSync } from 'node:child_process';
+import { accountIdCommand, parseIni, profilesFromAwsConfig } from '../src/importers/awsConfig.js';
 import { EXPORT_FORMAT, EXPORT_VERSION, exportProfiles, profilesFromJson } from '../src/importers/json.js';
-import { detectFormat, importProfiles, mergeProfiles } from '../src/importers/index.js';
+import { dedupeProfiles, detectFormat, importProfiles, mergeProfiles } from '../src/importers/index.js';
+import { setLanguage } from '../src/i18n/index.js';
+import { normalizeProfile } from '../src/lib/profile.js';
+
+afterEach(() => setLanguage('en'));
 
 const AWS_CONFIG = `\uFEFF# shared config
 orphan = ignored before any section
@@ -31,6 +36,7 @@ sso_role_name = ReadOnly
 [profile billing-stg]
 role_arn = arn:aws:iam::777788889999:role/ops/Billing
 source_profile = default
+group = Billing
 s3 =
   max_concurrent_requests = 20
 region = eu-west-1
@@ -58,6 +64,7 @@ describe('parseIni', () => {
     expect(billing).toEqual({
       role_arn: 'arn:aws:iam::777788889999:role/ops/Billing',
       source_profile: 'default',
+      group: 'Billing',
       s3: '',
       region: 'eu-west-1',
     });
@@ -74,21 +81,26 @@ describe('profilesFromAwsConfig', () => {
   const { profiles, skipped } = profilesFromAwsConfig(AWS_CONFIG);
   const byName = Object.fromEntries(profiles.map((p) => [p.name, p]));
 
-  test('maps SSO profiles through their sso-session', () => {
+  test('maps SSO profiles through their sso-session, protecting a production name', () => {
     expect(byName['shop-prod']).toEqual({
-      name: 'shop-prod', env: 'prod', color: 'd13212', provider: 'sso',
+      name: 'shop-prod', tag: '', guarded: true, color: 'd13212', group: '', provider: 'sso',
       fields: { startUrl: 'https://example.awsapps.com/start', accountId: '111122223333', roleName: 'AdministratorAccess' },
     });
   });
 
-  test('maps legacy SSO profiles and honours env', () => {
-    expect(byName['legacy-sso']).toMatchObject({ env: 'test', provider: 'sso', fields: { startUrl: 'https://legacy.awsapps.com/start' } });
+  test('reads the legacy env key as the tag', () => {
+    expect(byName['legacy-sso']).toMatchObject({ tag: 'test', guarded: false, provider: 'sso', fields: { startUrl: 'https://legacy.awsapps.com/start' } });
   });
 
-  test('maps role_arn profiles to Switch Role', () => {
+  test('maps role_arn profiles to Switch Role and reads the group', () => {
     expect(byName['billing-stg']).toMatchObject({
-      env: 'stage', color: null, provider: 'switch-role', fields: { account: '777788889999', roleName: 'ops/Billing' },
+      tag: '', guarded: false, color: null, group: 'Billing', provider: 'switch-role', fields: { account: '777788889999', roleName: 'ops/Billing' },
     });
+  });
+
+  test('a production-looking tag protects the profile too', () => {
+    const [profile] = profilesFromAwsConfig('[profile billing]\naws_account_id = 111122223333\ntag = live').profiles;
+    expect(profile).toMatchObject({ tag: 'live', guarded: true });
   });
 
   test('maps aws_account_id profiles to IAM user sign-in', () => {
@@ -122,7 +134,7 @@ describe('JSON', () => {
   test('import refuses newer formats, junk and bad JSON', () => {
     expect(() => profilesFromJson(JSON.stringify({ format: EXPORT_FORMAT, version: EXPORT_VERSION + 1, profiles: [] })))
       .toThrow('newer version');
-    expect(() => profilesFromJson('{"format":"other"}')).toThrow('Expected an AWS Hop export');
+    expect(() => profilesFromJson('{"format":"other"}')).toThrow('Expected an AWS Hop export or an array of accounts');
     expect(() => profilesFromJson(JSON.stringify({ format: EXPORT_FORMAT, version: 1 }))).toThrow('Expected an AWS Hop export');
     expect(() => profilesFromJson('null')).toThrow('Expected an AWS Hop export');
     expect(() => profilesFromJson('{oops')).toThrow('Invalid JSON');
@@ -177,27 +189,132 @@ describe('importProfiles', () => {
   test('rejects an unknown format', () => {
     expect(() => importProfiles('', { format: 'yaml' })).toThrow('Unknown import format "yaml"');
   });
+
+  test('skip reasons follow the language', () => {
+    setLanguage('ko');
+    expect(importProfiles('[default]\nregion = us-east-1').skipped)
+      .toEqual([{ name: 'default', reason: 'role_arn, sso_account_id, aws_account_id가 모두 없습니다' }]);
+  });
+});
+
+describe('duplicates in a CLI config', () => {
+  let n = 0;
+  const idFactory = () => `dup-${n++}`;
+  const CONFIG = `
+[profile default]
+aws_account_id = 111122223333
+
+[profile shop]
+aws_account_id = 111122223333
+
+[profile terraform-shop]
+aws_account_id = 1111-2222-3333
+
+[profile data]
+aws_account_id = 444455556666
+
+[profile terraform-data]
+aws_account_id = 444455556666
+
+[profile shop-admin]
+role_arn = arn:aws:iam::111122223333:role/Admin
+
+[profile terraform-shop-admin]
+role_arn = arn:aws:iam::111122223333:role/Admin
+`;
+
+  test('keeps one profile per sign-in target, under the shortest name', () => {
+    const { profiles, skipped } = importProfiles(CONFIG, { idFactory });
+    expect(profiles.map((p) => p.name)).toEqual(['shop', 'data', 'shop-admin']);
+    expect(skipped).toEqual([
+      { name: 'default', reason: 'signs in to the same place as shop, which is imported instead' },
+      { name: 'terraform-shop', reason: 'signs in to the same place as shop, which is imported instead' },
+      { name: 'terraform-data', reason: 'signs in to the same place as data, which is imported instead' },
+      { name: 'terraform-shop-admin', reason: 'signs in to the same place as shop-admin, which is imported instead' },
+    ]);
+  });
+
+  test('prefers any name over default, even a longer one', () => {
+    const iam = (name) => normalizeProfile({ name, provider: 'iam-user', fields: { account: '111122223333' } }, { idFactory });
+    expect(dedupeProfiles([iam('default'), iam('production-account')]).profiles.map((p) => p.name)).toEqual(['production-account']);
+  });
+
+  test('a JSON export is restored as it is, duplicates included', () => {
+    const text = JSON.stringify([
+      { name: 'a', provider: 'iam-user', fields: { account: '111122223333' } },
+      { name: 'b', provider: 'iam-user', fields: { account: '111122223333' } },
+    ]);
+    expect(importProfiles(text, { idFactory }).profiles.map((p) => p.name)).toEqual(['a', 'b']);
+  });
+
+  test('explains in Korean too', () => {
+    setLanguage('ko');
+    expect(importProfiles(CONFIG, { idFactory }).skipped[0].reason).toBe('로그인 대상이 같아 shop 하나만 가져옵니다');
+  });
+});
+
+describe('accountIdCommand', () => {
+  const fakeAws = `aws() {
+  if [ "$1" = configure ]; then printf 'default\\nshop\\nterraform-shop\\nexpired\\n'; return; fi
+  case "$4" in default|shop|terraform-shop) echo 111122223333 ;; *) return 255 ;; esac
+}`;
+
+  test('prints the loop, ending in pbcopy only when asked', () => {
+    expect(accountIdCommand().split('\n')).toEqual([
+      'for p in $(aws configure list-profiles); do',
+      '  id=$(aws sts get-caller-identity --profile "$p" --query Account --output text 2>/dev/null) || continue',
+      `  printf '[profile %s]\\naws_account_id = %s\\n\\n' "$p" "$id"`,
+      'done',
+    ]);
+    expect(accountIdCommand({ copyToClipboard: true }).endsWith('done | pbcopy')).toBe(true);
+  });
+
+  test.each(['bash', 'zsh'])('its %s output imports as one account per target', (shell) => {
+    let output;
+    try {
+      output = execFileSync(shell, ['-c', `${fakeAws}\n${accountIdCommand()}`], { encoding: 'utf8' });
+    } catch (error) {
+      if (error.code === 'ENOENT') return;
+      throw error;
+    }
+    const { profiles, skipped } = importProfiles(output, { idFactory: () => 'id' });
+    expect(profiles.map((p) => [p.name, p.fields.account])).toEqual([['shop', '111122223333']]);
+    expect(skipped.map((s) => s.name)).toEqual(['default', 'terraform-shop']);
+  });
 });
 
 describe('mergeProfiles', () => {
-  const existing = [
-    { id: 'a', name: 'Shop', provider: 'iam-user' },
-    { id: 'b', name: 'Billing', provider: 'sso' },
-  ];
+  const iam = (id, name, account, extra = {}) => normalizeProfile({ id, name, provider: 'iam-user', fields: { account }, ...extra });
+  const existing = [iam('a', 'Shop', '111122223333'), iam('b', 'Billing', '222233334444')];
 
-  test('adds new, replaces by id and by method + name, keeping ids and positions', () => {
-    const incoming = [
-      { id: 'a', name: 'Shop renamed', provider: 'iam-user' },
-      { id: 'x', name: 'billing', provider: 'sso', env: 'prod' },
-      { id: 'y', name: 'Billing', provider: 'iam-user' },
-      { id: 'z', name: 'Billing', provider: 'iam-user', env: 'dev' },
-    ];
-    const { profiles, added, updated } = mergeProfiles(existing, incoming);
-    expect(profiles).toEqual([
-      { id: 'a', name: 'Shop renamed', provider: 'iam-user' },
-      { id: 'b', name: 'billing', provider: 'sso', env: 'prod' },
-      { id: 'y', name: 'Billing', provider: 'iam-user', env: 'dev' },
+  test('replaces by id, then by method and name, keeping ids and positions', () => {
+    const { profiles, added, updated, existing: present } = mergeProfiles(existing, [
+      iam('a', 'Shop renamed', '111122223333'),
+      iam('x', 'billing', '222233334444', { tag: 'prod' }),
+      iam('y', 'Data', '444455556666'),
+      iam('z', 'Data', '444455556666', { tag: 'dev' }),
     ]);
-    expect({ added, updated }).toEqual({ added: 1, updated: 3 });
+    expect(profiles.map((p) => [p.id, p.name, p.tag])).toEqual([
+      ['a', 'Shop renamed', ''],
+      ['b', 'billing', 'prod'],
+      ['y', 'Data', 'dev'],
+    ]);
+    expect({ added, updated, present }).toEqual({ added: 1, updated: 3, present: [] });
+  });
+
+  test('an update keeps the tag, color, group and protection set in AWS Hop', () => {
+    const edited = [iam('a', 'Shop', '111122223333', { tag: 'qa', color: '#123456', group: 'Shop', guarded: true })];
+    const [profile] = mergeProfiles(edited, [iam('new', 'Shop', '111122223333')]).profiles;
+    expect(profile).toMatchObject({ id: 'a', tag: 'qa', color: '#123456', group: 'Shop', guarded: true });
+    const [retagged] = mergeProfiles(edited, [iam('new', 'Shop', '111122223333', { tag: 'live', color: '#654321' })]).profiles;
+    expect(retagged).toMatchObject({ tag: 'live', color: '#654321' });
+  });
+
+  test('never adds a second profile for an account already in the list', () => {
+    const first = mergeProfiles(existing, [iam('a', 'Shop renamed', '111122223333')]);
+    const { profiles, added, existing: present } = mergeProfiles(first.profiles, [iam('w', 'terraform-shop', '111122223333')]);
+    expect(profiles).toHaveLength(2);
+    expect(added).toBe(0);
+    expect(present).toEqual([{ name: 'terraform-shop', reason: 'already in your list as Shop renamed' }]);
   });
 });

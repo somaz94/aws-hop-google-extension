@@ -7,21 +7,21 @@
 </head>
 <body>
   <header class="bar">
-    <input id="search" type="search" placeholder="Search accounts" autocomplete="off" spellcheck="false" aria-label="Search accounts" aria-controls="list">
-    <button id="open-options" class="icon-btn" type="button" title="Manage accounts" aria-label="Manage accounts">⚙</button>
+    <input id="search" type="search" placeholder="Search accounts" data-i18n-placeholder="popup.search" aria-label="Search accounts" data-i18n-aria-label="popup.search" autocomplete="off" spellcheck="false" aria-controls="list">
+    <button id="open-options" class="icon-btn" type="button" title="Manage accounts" data-i18n-title="popup.manage" aria-label="Manage accounts" data-i18n-aria-label="popup.manage">⚙</button>
   </header>
 
   <div id="current" class="current" hidden></div>
 
-  <ul id="list" class="list" role="listbox" aria-label="Accounts"></ul>
+  <ul id="list" class="list" role="listbox" aria-label="Accounts" data-i18n-aria-label="options.accounts"></ul>
 
   <div id="empty" class="empty" hidden>
-    <p>No accounts yet.</p>
-    <button id="add-first" class="primary" type="button">Add your first account</button>
+    <p data-i18n="popup.empty">No accounts yet.</p>
+    <button id="add-first" class="primary" type="button" data-i18n="popup.addFirst">Add your first account</button>
   </div>
-  <p id="no-match" class="empty" hidden>No account matches.</p>
+  <p id="no-match" class="empty" data-i18n="popup.noMatch" hidden>No account matches.</p>
 
-  <footer class="hint">↑↓ select · Enter open · Shift+Enter other tab</footer>
+  <footer class="hint" data-i18n="popup.hint">↑↓ select · Enter open · Shift+Enter other tab</footer>
 
   <script type="module" src="popup.js"></script>
 </body>

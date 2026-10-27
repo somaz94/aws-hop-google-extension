@@ -1,9 +1,10 @@
 import { describe, test, expect } from '@jest/globals';
 import { buildProfileUrl, normalizeProfile, profileAccount, profileRoles, validateProfile } from '../src/lib/profile.js';
+import { colorFor } from '../src/lib/tag.js';
 import { httpsUrlError } from '../src/providers/fields.js';
 import { normalizeStartUrl } from '../src/providers/sso.js';
 
-const make = (provider, fields, extra = {}) => normalizeProfile({ name: 'shop-prod', provider, env: 'prod', fields, ...extra });
+const make = (provider, fields, extra = {}) => normalizeProfile({ name: 'shop-prod', provider, fields, ...extra });
 const errorsOf = (profile) => validateProfile(profile).map((error) => error.field);
 
 describe('iam-user', () => {
@@ -24,14 +25,14 @@ describe('iam-user', () => {
 });
 
 describe('switch-role', () => {
-  test('prefills account, role, display name and the environment color', () => {
+  test('prefills account, role, display name and the project color', () => {
     const url = new URL(buildProfileUrl(make('switch-role', { account: '111122223333', roleName: 'Admin' })));
     expect(url.origin + url.pathname).toBe('https://signin.aws.amazon.com/switchrole');
     expect(Object.fromEntries(url.searchParams)).toEqual({
       account: '111122223333',
       roleName: 'Admin',
       displayName: 'shop-prod',
-      color: 'd13212',
+      color: colorFor('shop').slice(1),
     });
   });
 
@@ -67,6 +68,13 @@ describe('switch-role', () => {
   test('rejects a display name over 64 characters', () => {
     expect(errorsOf(make('switch-role', { account: '111122223333', roleName: 'Admin', displayName: 'x'.repeat(65) })))
       .toEqual(['displayName']);
+  });
+
+  test('two profiles for the same account and role are one target, whatever their display names', async () => {
+    const { profileTarget } = await import('../src/lib/profile.js');
+    const a = make('switch-role', { account: '111122223333', roleName: 'Admin', displayName: 'A' });
+    const b = make('switch-role', { account: '1111-2222-3333', roleName: 'Admin', displayName: 'B' });
+    expect(profileTarget(a)).toBe(profileTarget(b));
   });
 
   test('reports the role name and display name for matching', () => {

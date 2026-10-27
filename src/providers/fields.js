@@ -1,15 +1,17 @@
 import { normalizeAccount, normalizeAccountId } from '../lib/account.js';
+import { formatList, t } from '../i18n/index.js';
 
 export const SIGNIN_HOST = 'signin.aws.amazon.com';
 
+// Field `label`, `help` and `placeholder` are i18n keys; a placeholder that is not a key is shown as is.
 export function accountRefField(overrides = {}) {
   return {
     key: 'account',
-    label: 'Account ID or alias',
+    label: 'field.account.label',
     required: true,
     placeholder: '111122223333',
     normalize: (value) => normalizeAccount(value) ?? value,
-    validate: (value) => (normalizeAccount(value) ? null : 'Enter a 12-digit account ID or an account alias'),
+    validate: (value) => (normalizeAccount(value) ? null : t('error.accountRef')),
     ...overrides,
   };
 }
@@ -17,11 +19,11 @@ export function accountRefField(overrides = {}) {
 export function accountIdField(overrides = {}) {
   return {
     key: 'accountId',
-    label: 'Account ID',
+    label: 'field.accountId.label',
     required: true,
     placeholder: '111122223333',
     normalize: (value) => normalizeAccountId(value) ?? value,
-    validate: (value) => (normalizeAccountId(value) ? null : 'Enter a 12-digit account ID'),
+    validate: (value) => (normalizeAccountId(value) ? null : t('error.accountId')),
     ...overrides,
   };
 }
@@ -32,12 +34,11 @@ export function httpsUrlError(value, hostSuffixes = null) {
   try {
     url = new URL(value);
   } catch {
-    return 'Enter a full URL starting with https://';
+    return t('error.urlInvalid');
   }
-  if (url.protocol !== 'https:') return 'The URL must start with https://';
+  if (url.protocol !== 'https:') return t('error.urlHttps');
   if (hostSuffixes && !hostSuffixes.some((suffix) => url.hostname.endsWith(suffix))) {
-    const choices = hostSuffixes.length > 1 ? `${hostSuffixes.slice(0, -1).join(', ')} or ${hostSuffixes.at(-1)}` : hostSuffixes[0];
-    return `The host must end with ${choices}`;
+    return t('error.hostSuffix', { choices: formatList(hostSuffixes) });
   }
   return null;
 }

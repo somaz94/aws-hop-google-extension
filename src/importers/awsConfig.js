@@ -1,5 +1,6 @@
+import { t } from '../i18n/index.js';
 import { normalizeAccountId, parseRoleArn } from '../lib/account.js';
-import { inferEnv, isEnvironment } from '../lib/env.js';
+import { looksProtected } from '../lib/tag.js';
 
 const SECTION = /^\[\s*([^\]]+?)\s*\]$/;
 const ENTRY = /^([^=]+?)\s*=\s*(.*)$/;
@@ -33,6 +34,16 @@ export function parseIni(text) {
   return sections;
 }
 
+/** A shell loop that prints one importable profile per AWS CLI profile, its account ID read from STS. */
+export function accountIdCommand({ copyToClipboard = false } = {}) {
+  return [
+    'for p in $(aws configure list-profiles); do',
+    '  id=$(aws sts get-caller-identity --profile "$p" --query Account --output text 2>/dev/null) || continue',
+    `  printf '[profile %s]\\naws_account_id = %s\\n\\n' "$p" "$id"`,
+    copyToClipboard ? 'done | pbcopy' : 'done',
+  ].join('\n');
+}
+
 function profileName(section) {
   if (section.name === 'default') return 'default';
   const match = /^profile\s+(.+)$/.exec(section.name);
@@ -40,31 +51,30 @@ function profileName(section) {
 }
 
 function toProfile(name, entries, sessions) {
-  const common = {
-    name,
-    env: isEnvironment(entries.env) ? entries.env : inferEnv(name),
-    color: entries.color || null,
-  };
+  // `env` is read as `tag`, its name before tags were free-form.
+  const tag = entries.tag ?? entries.env ?? '';
+  const common = { name, tag, guarded: looksProtected(name, tag), color: entries.color || null, group: entries.group ?? '' };
   if (entries.sso_account_id && entries.sso_role_name) {
     const startUrl = entries.sso_start_url || sessions.get(entries.sso_session)?.sso_start_url;
-    if (!startUrl) return { reason: 'sso_start_url not found in the profile or its sso-session' };
+    if (!startUrl) return { reason: t('import.skip.noSsoStartUrl') };
     return { ...common, provider: 'sso', fields: { startUrl, accountId: entries.sso_account_id, roleName: entries.sso_role_name } };
   }
   if (entries.role_arn) {
     const arn = parseRoleArn(entries.role_arn);
-    if (!arn) return { reason: 'role_arn is not an IAM role ARN' };
+    if (!arn) return { reason: t('import.skip.notRoleArn') };
     return { ...common, provider: 'switch-role', fields: { account: arn.accountId, roleName: arn.roleName } };
   }
   if (normalizeAccountId(entries.aws_account_id)) {
     return { ...common, provider: 'iam-user', fields: { account: entries.aws_account_id } };
   }
-  return { reason: 'no role_arn, sso_account_id or aws_account_id' };
+  return { reason: t('import.skip.noAccount') };
 }
 
 /**
  * Maps `~/.aws/config` profiles to raw profile input: SSO profiles to IAM Identity Center links,
  * `role_arn` profiles to Switch Role, `aws_account_id`-only profiles to IAM user sign-in.
- * Optional `env` and `color` keys are honoured; the AWS CLI ignores keys it does not know.
+ * Optional `tag`, `color` and `group` keys are read; a profile whose name or tag reads like
+ * production is marked protected.
  */
 export function profilesFromAwsConfig(text) {
   const sections = parseIni(text);

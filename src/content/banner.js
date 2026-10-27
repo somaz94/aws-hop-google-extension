@@ -1,3 +1,5 @@
+import { PROTECTED_COLOR } from '../lib/tag.js';
+
 export const HOST_TAG = 'aws-hop-guard';
 
 const FONT = `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`;
@@ -10,7 +12,7 @@ const STYLE = `
 }
 .frame {
   position: fixed; inset: 0; z-index: 2147483646; pointer-events: none;
-  box-shadow: inset 0 0 0 3px var(--color);
+  box-shadow: inset 0 0 0 3px ${PROTECTED_COLOR};
 }
 .pill {
   position: fixed; left: 12px; bottom: 44px; z-index: 2147483647;
@@ -65,7 +67,7 @@ export function renderGuard(doc, view) {
   root.querySelector('.frame').hidden = !view.frame;
   const pill = root.querySelector('.pill');
   pill.classList.toggle('muted', view.muted);
-  pill.title = `AWS Hop: ${view.label} (${view.account}), detected from the ${view.detectedFrom}. Click to minimize.`;
+  pill.title = view.tooltip;
   root.querySelector('.label').textContent = view.label;
   root.querySelector('.account').textContent = view.account;
 }

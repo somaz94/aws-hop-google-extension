@@ -2,7 +2,7 @@ import { describe, test, expect, jest } from '@jest/globals';
 import { createStore, DEFAULT_SETTINGS, normalizeSettings, profilesFromItems } from '../src/lib/store.js';
 import { createFakeStorage } from './helpers/fakeStorage.js';
 
-const profile = (id, name = id) => ({ id, name, provider: 'iam-user', env: 'other', color: null, group: '', fields: { account: '111122223333' } });
+const profile = (id, name = id) => ({ id, name, provider: 'iam-user', tag: '', guarded: false, color: null, group: '', fields: { account: '111122223333' } });
 
 function setup(initial) {
   const storage = createFakeStorage(initial);
@@ -62,6 +62,16 @@ describe('profiles', () => {
   });
 });
 
+describe('older stored accounts', () => {
+  test('an account saved with an env loads with a tag and protection', async () => {
+    const legacy = { id: 'old', name: 'shop-prod', provider: 'iam-user', env: 'prod', color: null, group: '', fields: { account: '111122223333' } };
+    const { store } = setup({ profileOrder: ['old'], 'profile:old': legacy });
+    expect(await store.loadProfiles()).toEqual([
+      { id: 'old', name: 'shop-prod', provider: 'iam-user', tag: 'prod', guarded: true, color: null, group: '', fields: { account: '111122223333' } },
+    ]);
+  });
+});
+
 describe('profilesFromItems', () => {
   test('orders by profileOrder and appends unordered profiles', () => {
     const items = {
@@ -87,13 +97,13 @@ describe('settings', () => {
 
   test('round-trips valid values and drops invalid ones', async () => {
     const { store } = setup();
-    await store.saveSettings({ openIn: 'current-tab', guardEnabled: false, guardTitlePrefix: 'yes', extra: 1 });
-    expect(await store.loadSettings()).toEqual({ ...DEFAULT_SETTINGS, openIn: 'current-tab', guardEnabled: false });
+    await store.saveSettings({ language: 'ko', openIn: 'current-tab', guardEnabled: false, guardTitlePrefix: 'yes', extra: 1 });
+    expect(await store.loadSettings()).toEqual({ ...DEFAULT_SETTINGS, language: 'ko', openIn: 'current-tab', guardEnabled: false });
   });
 
   test('normalizeSettings ignores junk', () => {
     expect(normalizeSettings(null)).toEqual(DEFAULT_SETTINGS);
-    expect(normalizeSettings({ openIn: 'popup' })).toEqual(DEFAULT_SETTINGS);
+    expect(normalizeSettings({ openIn: 'popup', language: 'fr' })).toEqual(DEFAULT_SETTINGS);
   });
 });
 

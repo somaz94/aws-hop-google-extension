@@ -1,15 +1,14 @@
-import { formatAccountId } from './account.js';
-import { getEnvironment } from './env.js';
+import { translations } from '../i18n/index.js';
 import { getProvider } from '../providers/index.js';
+import { formatAccountId } from './account.js';
 import { profileAccount } from './profile.js';
 
 function haystack(profile) {
-  const env = getEnvironment(profile.env);
   const provider = getProvider(profile.provider);
   const account = profileAccount(profile) ?? '';
   return [
-    profile.name, profile.group, env.id, env.short, env.label,
-    provider?.label, provider?.short, account, formatAccountId(account),
+    profile.name, profile.group, profile.tag,
+    ...(provider ? translations(provider.label) : []), provider?.short, account, formatAccountId(account),
     ...Object.values(profile.fields),
   ].join(' ').toLowerCase();
 }

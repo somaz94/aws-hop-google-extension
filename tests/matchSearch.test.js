@@ -6,10 +6,10 @@ import { filterProfiles, groupProfiles, moveSelection, resolveOpenTarget } from 
 let next = 0;
 const make = (input) => normalizeProfile(input, { idFactory: () => `id-${next++}` });
 
-const shopProdAdmin = make({ name: 'shop-prod admin', provider: 'switch-role', env: 'prod', group: 'Shop', fields: { account: '111122223333', roleName: 'Admin' } });
-const shopProdRead = make({ name: 'shop-prod read', provider: 'sso', env: 'prod', group: 'Shop', fields: { startUrl: 'https://example.awsapps.com/start', accountId: '111122223333', roleName: 'ReadOnly' } });
-const shopDev = make({ name: 'shop-dev', provider: 'iam-user', env: 'dev', group: 'Shop', fields: { account: '444455556666' } });
-const sandbox = make({ name: 'sandbox', provider: 'iam-user', env: 'dev', fields: { account: 'my-sandbox' } });
+const shopProdAdmin = make({ name: 'shop-prod admin', provider: 'switch-role', tag: 'prod', guarded: true, group: 'Shop', fields: { account: '111122223333', roleName: 'Admin' } });
+const shopProdRead = make({ name: 'shop-prod read', provider: 'sso', tag: 'prod', group: 'Shop', fields: { startUrl: 'https://example.awsapps.com/start', accountId: '111122223333', roleName: 'ReadOnly' } });
+const shopDev = make({ name: 'shop-dev', provider: 'iam-user', tag: 'dev', group: 'Shop', fields: { account: '444455556666' } });
+const sandbox = make({ name: 'sandbox', provider: 'iam-user', tag: 'dev', fields: { account: 'my-sandbox' } });
 const all = [shopProdAdmin, shopProdRead, shopDev, sandbox];
 
 describe('normalizeRoleName', () => {
@@ -58,6 +58,11 @@ describe('filterProfiles', () => {
   test('every term must match somewhere', () => {
     expect(filterProfiles(all, 'shop dev')).toEqual([shopDev]);
     expect(filterProfiles(all, 'prod sso')).toEqual([shopProdRead]);
+  });
+
+  test('matches the sign-in method in either language', () => {
+    expect(filterProfiles(all, '역할')).toEqual([shopProdAdmin]);
+    expect(filterProfiles(all, 'switch')).toEqual([shopProdAdmin]);
   });
 
   test('matches formatted and raw account IDs', () => {

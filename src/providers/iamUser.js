@@ -3,10 +3,9 @@ import { accountRefField, SIGNIN_HOST } from './fields.js';
 
 export default {
   id: 'iam-user',
-  label: 'IAM user sign-in',
+  label: 'provider.iam-user.label',
   short: 'IAM',
-  description: 'Opens the sign-in page of the account with the account already filled in. '
-    + 'The user name and password are left to the browser password manager.',
+  description: 'provider.iam-user.description',
   fields: [accountRefField()],
   example: { account: '111122223333' },
   buildUrl({ account }) {

@@ -4,16 +4,21 @@
 import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 import { buildView, NAV_ATTR, readNavInfo, startGuard } from '../src/content/guard.js';
 import { HOST_TAG } from '../src/content/banner.js';
+import { setLanguage } from '../src/i18n/index.js';
 import { MSG } from '../src/lib/messages.js';
 import { createStore, DEFAULT_SETTINGS } from '../src/lib/store.js';
-import { normalizeProfile } from '../src/lib/profile.js';
+import { readableTextColor } from '../src/lib/color.js';
+import { normalizeProfile, profileColor } from '../src/lib/profile.js';
 import { createFakeRuntime, createFakeStorage } from './helpers/fakeStorage.js';
 
-const prod = normalizeProfile({ id: 'prod', name: 'shop-prod', provider: 'iam-user', env: 'prod', fields: { account: '111122223333' } });
-const dev = normalizeProfile({ id: 'dev', name: 'shop-dev', provider: 'iam-user', env: 'dev', fields: { account: '444455556666' } });
-const identity = (account) => ({ accounts: [account], role: null, source: 'nav' });
+const prod = normalizeProfile({ id: 'prod', name: 'shop-prod', provider: 'iam-user', tag: 'prod', guarded: true, fields: { account: '111122223333' } });
+const dev = normalizeProfile({ id: 'dev', name: 'shop-dev', provider: 'iam-user', fields: { account: '444455556666' } });
+const identity = (account, source = 'nav') => ({ accounts: [account], role: null, source });
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const label = () => document.querySelector(HOST_TAG)?.shadowRoot.querySelector('.label').textContent ?? null;
+const pill = () => document.querySelector(HOST_TAG)?.shadowRoot.querySelector('.pill') ?? null;
+const label = () => pill()?.querySelector('.label').textContent ?? null;
+
+afterEach(() => setLanguage('en'));
 
 describe('buildView', () => {
   test('nothing when disabled or no identity', () => {
@@ -21,21 +26,37 @@ describe('buildView', () => {
     expect(buildView(null, prod, DEFAULT_SETTINGS)).toBeNull();
   });
 
-  test('production gets the frame and title prefix', () => {
+  test('a protected account gets the frame and a title prefix with its name', () => {
     expect(buildView(identity('111122223333'), prod, DEFAULT_SETTINGS)).toEqual({
-      color: '#d13212', textColor: '#ffffff', label: 'PROD · shop-prod', account: '1111-2222-3333', detectedFrom: 'console navigation',
-      frame: true, muted: false, titlePrefix: '[PROD] ',
+      color: profileColor(prod),
+      textColor: readableTextColor(profileColor(prod)),
+      label: 'prod · shop-prod',
+      account: '1111-2222-3333',
+      tooltip: 'AWS Hop: prod · shop-prod (1111-2222-3333), detected from the console navigation. Click to minimize.',
+      frame: true,
+      muted: false,
+      titlePrefix: '[shop-prod] ',
     });
     expect(buildView(identity('111122223333'), prod, { ...DEFAULT_SETTINGS, guardTitlePrefix: false }).titlePrefix).toBeNull();
   });
 
-  test('other environments get the stripe and pill only', () => {
-    expect(buildView(identity('444455556666'), dev, DEFAULT_SETTINGS)).toMatchObject({ frame: false, titlePrefix: null, muted: false });
+  test('an untagged, unprotected account shows its name only', () => {
+    expect(buildView(identity('444455556666', 'host'), dev, DEFAULT_SETTINGS))
+      .toMatchObject({ label: 'shop-dev', frame: false, titlePrefix: null, muted: false });
   });
 
-  test('unregistered accounts are muted, or hidden by setting', () => {
-    expect(buildView(identity('999999999999'), null, DEFAULT_SETTINGS)).toMatchObject({ label: 'Unregistered account', muted: true });
+  test('accounts not in the list are muted, or hidden by setting', () => {
+    expect(buildView(identity('999999999999', 'dom'), null, DEFAULT_SETTINGS))
+      .toMatchObject({ label: 'Account not in your list', muted: true, frame: false });
     expect(buildView(identity('999999999999'), null, { ...DEFAULT_SETTINGS, guardShowUnregistered: false })).toBeNull();
+  });
+
+  test('speaks the current language', () => {
+    setLanguage('ko');
+    expect(buildView(identity('999999999999', 'host'), null, DEFAULT_SETTINGS)).toMatchObject({
+      label: '목록에 없는 계정',
+      tooltip: 'AWS Hop: 목록에 없는 계정 (9999-9999-9999). 멀티 세션 URL에서 감지했습니다. 클릭하면 접힙니다.',
+    });
   });
 });
 
@@ -57,7 +78,7 @@ describe('startGuard', () => {
   let runtime;
   let guard;
 
-  const start = (options = {}) => startGuard({ doc: document, hostname: 'us-east-1.console.aws.amazon.com', store, runtime, ...options });
+  const start = (options = {}) => startGuard({ doc: document, hostname: 'us-east-1.console.aws.amazon.com', store, runtime, uiLanguage: 'en-US', ...options });
 
   beforeEach(async () => {
     document.documentElement.removeAttribute(NAV_ATTR);
@@ -74,8 +95,8 @@ describe('startGuard', () => {
   test('shows the matched profile and prefixes the title', async () => {
     document.documentElement.setAttribute(NAV_ATTR, JSON.stringify({ loginDisplayNameAccount: '1111-2222-3333' }));
     guard = await start();
-    expect(label()).toBe('PROD · shop-prod');
-    expect(document.title).toBe('[PROD] Console Home');
+    expect(label()).toBe('prod · shop-prod');
+    expect(document.title).toBe('[shop-prod] Console Home');
     expect(guard.state.profile.id).toBe('prod');
   });
 
@@ -93,7 +114,7 @@ describe('startGuard', () => {
     expect(label()).toBeNull();
     document.documentElement.setAttribute(NAV_ATTR, JSON.stringify({ loginDisplayNameAccount: '444455556666' }));
     await wait(400);
-    expect(label()).toBe('DEV · shop-dev');
+    expect(label()).toBe('shop-dev');
   });
 
   test('stops watching the page after the observation window', async () => {
@@ -103,22 +124,33 @@ describe('startGuard', () => {
     await wait(400);
     expect(label()).toBeNull();
     guard.update();
-    expect(label()).toBe('DEV · shop-dev');
+    expect(label()).toBe('shop-dev');
   });
 
   test('reacts to profile and settings changes', async () => {
     document.documentElement.setAttribute(NAV_ATTR, JSON.stringify({ loginDisplayNameAccount: '999999999999' }));
     guard = await start();
-    expect(label()).toBe('Unregistered account');
+    expect(label()).toBe('Account not in your list');
 
-    await store.saveProfile(normalizeProfile({ id: 'new', name: 'new-prod', provider: 'iam-user', env: 'prod', fields: { account: '999999999999' } }));
+    await store.saveSettings({ ...DEFAULT_SETTINGS, language: 'ko' });
     await wait(0);
-    expect(label()).toBe('PROD · new-prod');
+    expect(label()).toBe('목록에 없는 계정');
+
+    await store.saveProfile(normalizeProfile({ id: 'new', name: 'billing', provider: 'iam-user', tag: '운영', guarded: true, fields: { account: '999999999999' } }));
+    await wait(0);
+    expect(label()).toBe('운영 · billing');
+    expect(document.title).toBe('[billing] Console Home');
 
     await store.saveSettings({ ...DEFAULT_SETTINGS, guardEnabled: false });
     await wait(0);
     expect(label()).toBeNull();
     expect(document.title).toBe('Console Home');
+  });
+
+  test('follows the browser language when set to auto', async () => {
+    document.documentElement.setAttribute(NAV_ATTR, JSON.stringify({ loginDisplayNameAccount: '999999999999' }));
+    guard = await start({ uiLanguage: 'ko-KR' });
+    expect(label()).toBe('목록에 없는 계정');
   });
 
   test('stop removes everything it added', async () => {

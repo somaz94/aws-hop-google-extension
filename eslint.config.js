@@ -4,6 +4,8 @@ const browser = {
   window: 'readonly',
   document: 'readonly',
   location: 'readonly',
+  history: 'readonly',
+  HTMLButtonElement: 'readonly',
   navigator: 'readonly',
   console: 'readonly',
   setTimeout: 'readonly',

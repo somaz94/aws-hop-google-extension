@@ -1,6 +1,6 @@
+import { resolveLanguage, setLanguage, t } from '../i18n/index.js';
 import { formatAccountId } from '../lib/account.js';
 import { readableTextColor } from '../lib/color.js';
-import { getEnvironment } from '../lib/env.js';
 import { detectIdentity } from '../lib/identity.js';
 import { matchProfile } from '../lib/match.js';
 import { MSG } from '../lib/messages.js';
@@ -13,7 +13,6 @@ export const NAV_ATTR = 'data-aws-hop-nav';
 export const OBSERVE_MS = 20000;
 const DEBOUNCE_MS = 250;
 const UNREGISTERED_COLOR = '#545b64';
-const SOURCE_LABELS = Object.freeze({ nav: 'console navigation', dom: 'page header', host: 'multi-session URL' });
 
 export function readNavInfo(doc) {
   const raw = doc.documentElement.getAttribute(NAV_ATTR);
@@ -28,31 +27,20 @@ export function readNavInfo(doc) {
 export function buildView(identity, profile, settings) {
   if (!settings.guardEnabled || !identity) return null;
   const account = formatAccountId(identity.accounts[0]);
-  const detectedFrom = SOURCE_LABELS[identity.source];
-  if (profile) {
-    const env = getEnvironment(profile.env);
-    const color = profileColor(profile);
-    return {
-      color,
-      textColor: readableTextColor(color),
-      label: `${env.short} · ${profile.name}`,
-      account,
-      detectedFrom,
-      frame: env.guarded,
-      muted: false,
-      titlePrefix: env.guarded && settings.guardTitlePrefix ? `[${env.short}] ` : null,
-    };
-  }
-  if (!settings.guardShowUnregistered) return null;
+  const source = t(`guard.source.${identity.source}`);
+  const color = profile ? profileColor(profile) : UNREGISTERED_COLOR;
+  if (!profile && !settings.guardShowUnregistered) return null;
+  const label = !profile ? t('guard.unregistered') : profile.tag ? `${profile.tag} · ${profile.name}` : profile.name;
   return {
-    color: UNREGISTERED_COLOR,
-    textColor: readableTextColor(UNREGISTERED_COLOR),
-    label: 'Unregistered account',
+    color,
+    textColor: readableTextColor(color),
+    label,
     account,
-    detectedFrom,
-    frame: false,
-    muted: true,
-    titlePrefix: null,
+    tooltip: t('guard.tooltip', { label, account, source }),
+    frame: Boolean(profile?.guarded),
+    muted: !profile,
+    // The account name, not the tag: with several production accounts open, `[prod]` would not tell the tabs apart.
+    titlePrefix: profile?.guarded && settings.guardTitlePrefix ? `[${profile.name}] ` : null,
   };
 }
 
@@ -61,9 +49,11 @@ export async function startGuard({
   hostname = globalThis.location?.hostname,
   store = createStore(),
   runtime = globalThis.chrome?.runtime,
+  uiLanguage = globalThis.chrome?.i18n?.getUILanguage?.(),
   observeMs = OBSERVE_MS,
 } = {}) {
   let [profiles, settings] = await Promise.all([store.loadProfiles(), store.loadSettings()]);
+  setLanguage(resolveLanguage(settings.language, uiLanguage));
   const title = createTitleKeeper(doc);
   let state = { identity: null, profile: null };
   let lastView;
@@ -95,7 +85,10 @@ export async function startGuard({
 
   const unsubscribe = store.onChange(async (changed) => {
     if (changed.profiles) profiles = await store.loadProfiles();
-    if (changed.settings) settings = await store.loadSettings();
+    if (changed.settings) {
+      settings = await store.loadSettings();
+      setLanguage(resolveLanguage(settings.language, uiLanguage));
+    }
     update();
   });
 

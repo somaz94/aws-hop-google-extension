@@ -4,6 +4,6 @@
     const { startGuard } = await import(chrome.runtime.getURL('src/content/guard.js'));
     await startGuard();
   } catch (error) {
-    console.warn('[AWS Hop] production guard did not start:', error);
+    console.warn('[AWS Hop] account guard did not start:', error);
   }
 })();

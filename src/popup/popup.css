@@ -73,6 +73,18 @@ body {
 
 .current strong { color: var(--fg); }
 
+.link-btn {
+  margin-left: 4px;
+  padding: 1px 8px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .list {
   max-height: 420px;
   margin: 0;
@@ -99,6 +111,7 @@ body {
 }
 
 .row:hover { background: var(--hover); }
+.row.guarded { box-shadow: inset 3px 0 0 #d13212; }
 .row[aria-selected="true"] { background: var(--selected); }
 
 .dot {

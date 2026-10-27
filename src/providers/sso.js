@@ -1,4 +1,5 @@
 import { normalizeAccountId } from '../lib/account.js';
+import { t } from '../i18n/index.js';
 import { accountIdField, httpsUrlError } from './fields.js';
 
 // awsapps.com: classic portal (incl. GovCloud), app.aws: dual-stack portal, awsapps.cn: China.
@@ -12,14 +13,13 @@ export function normalizeStartUrl(value) {
 
 export default {
   id: 'sso',
-  label: 'IAM Identity Center (SSO)',
+  label: 'provider.sso.label',
   short: 'SSO',
-  description: 'Opens an access-portal shortcut link that signs you in to the account with the chosen '
-    + 'permission set in one step.',
+  description: 'provider.sso.description',
   fields: [
     {
       key: 'startUrl',
-      label: 'AWS access portal URL',
+      label: 'field.startUrl.label',
       required: true,
       type: 'url',
       placeholder: 'https://example.awsapps.com/start',
@@ -29,18 +29,18 @@ export default {
     accountIdField(),
     {
       key: 'roleName',
-      label: 'Permission set',
+      label: 'field.permissionSet.label',
       required: true,
       placeholder: 'AdministratorAccess',
-      validate: (value) => (PERMISSION_SET.test(value) ? null : 'Up to 32 letters, digits and + = , . @ - _'),
+      validate: (value) => (PERMISSION_SET.test(value) ? null : t('error.permissionSet')),
     },
     {
       key: 'destination',
-      label: 'Landing page',
+      label: 'field.destination.label',
       required: false,
       type: 'url',
       placeholder: 'https://console.aws.amazon.com/s3/home',
-      help: 'Optional console URL to open after sign-in.',
+      help: 'field.destination.help',
       validate: (value) => httpsUrlError(value),
     },
   ],

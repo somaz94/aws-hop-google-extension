@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>AWS Hop settings</title>
+  <title data-i18n="options.title">AWS Hop settings</title>
   <link rel="stylesheet" href="options.css">
 </head>
 <body>
@@ -11,55 +11,66 @@
       <img src="../../icons/icon48.png" width="40" height="40" alt="">
       <div>
         <h1>AWS Hop</h1>
-        <p class="muted">Accounts are stored in Chrome sync storage. No passwords or access keys are ever stored.</p>
+        <p class="muted" data-i18n="options.subtitle">Accounts are stored in Chrome sync storage. No passwords or access keys are ever stored.</p>
       </div>
     </header>
 
     <section>
       <div class="section-head">
-        <h2>Accounts</h2>
-        <button id="add" class="primary" type="button">Add account</button>
+        <h2 data-i18n="options.accounts">Accounts</h2>
+        <button id="add" class="primary" type="button" data-i18n="options.add">Add account</button>
       </div>
       <ul id="profile-list" class="profile-list"></ul>
-      <p id="no-profiles" class="muted" hidden>No accounts yet. Add one, or import your <code>~/.aws/config</code> below.</p>
+      <p id="no-profiles" class="muted" data-i18n="options.noAccounts" hidden>No accounts yet.</p>
+      <datalist id="tag-suggestions"></datalist>
     </section>
 
     <section>
-      <h2>Import</h2>
-      <p class="muted">
-        Paste an AWS Hop export (JSON) or an AWS CLI config file. <code>sso_*</code> profiles become IAM Identity Center
-        links, <code>role_arn</code> profiles become Switch Role, and <code>aws_account_id</code> profiles become IAM user
-        sign-in. Optional <code>env</code> and <code>color</code> keys are read too.
-      </p>
-      <textarea id="import-text" rows="8" spellcheck="false" placeholder="[profile shop-prod]&#10;role_arn = arn:aws:iam::111122223333:role/Admin&#10;env = prod"></textarea>
+      <h2 data-i18n="options.import">Import</h2>
+      <p class="muted" data-i18n="options.importHelp">Paste an AWS Hop export (JSON) or an AWS CLI config file.</p>
+      <details id="cli-helper" class="helper">
+        <summary data-i18n="options.cliHelper.title">Get account IDs from your AWS CLI profiles</summary>
+        <p id="cli-helper-text" class="muted"></p>
+        <pre><code id="cli-command"></code></pre>
+        <button id="cli-copy" type="button" data-i18n="options.cliHelper.copy">Copy command</button>
+      </details>
+      <textarea id="import-text" rows="8" spellcheck="false" placeholder="[profile shop-prod]&#10;aws_account_id = 111122223333&#10;tag = prod"></textarea>
       <div class="actions">
-        <label class="file-btn">Load file<input id="import-file" type="file" accept=".json,.ini,.txt,.cfg,text/plain,application/json" hidden></label>
+        <label class="file-btn"><span data-i18n="options.loadFile">Load file</span><input id="import-file" type="file" accept=".json,.ini,.txt,.cfg,text/plain,application/json" hidden></label>
         <span class="spacer"></span>
-        <button id="import-merge" type="button">Merge into my accounts</button>
-        <button id="import-replace" class="danger" type="button">Replace all accounts</button>
+        <button id="import-merge" type="button" data-i18n="options.merge">Merge into my accounts</button>
+        <button id="import-replace" class="danger" type="button" data-i18n="options.replace">Replace all accounts</button>
       </div>
       <div id="import-result" class="result" hidden></div>
     </section>
 
     <section>
-      <h2>Export</h2>
-      <p class="muted">Download every account as JSON, to back up or move to a browser that does not sync.</p>
-      <button id="export" type="button">Export accounts</button>
+      <h2 data-i18n="options.export">Export</h2>
+      <p class="muted" data-i18n="options.exportHelp">Download every account as JSON.</p>
+      <button id="export" type="button" data-i18n="options.exportButton">Export accounts</button>
     </section>
 
     <section>
-      <h2>Settings</h2>
+      <h2 data-i18n="options.settings">Settings</h2>
       <label class="field">
-        <span>Open accounts in</span>
-        <select id="setting-openIn">
-          <option value="new-tab">A new tab</option>
-          <option value="current-tab">The current tab</option>
+        <span data-i18n="options.language">Language</span>
+        <select id="setting-language">
+          <option value="auto" data-i18n="options.languageAuto">Browser language</option>
+          <option value="en">English</option>
+          <option value="ko">한국어</option>
         </select>
-        <small class="muted">Shift, Ctrl or Cmd (or a middle click) opens in the other one.</small>
       </label>
-      <label class="check"><input id="setting-guardEnabled" type="checkbox"> Show the account guard on AWS console pages</label>
-      <label class="check"><input id="setting-guardShowUnregistered" type="checkbox"> Also mark accounts that are not in my list</label>
-      <label class="check"><input id="setting-guardTitlePrefix" type="checkbox"> Prefix production tab titles with [PROD]</label>
+      <label class="field">
+        <span data-i18n="options.openIn">Open accounts in</span>
+        <select id="setting-openIn">
+          <option value="new-tab" data-i18n="options.openIn.new">A new tab</option>
+          <option value="current-tab" data-i18n="options.openIn.current">The current tab</option>
+        </select>
+        <small class="muted" data-i18n="options.openInHelp">Shift, Ctrl or Cmd (or a middle click) opens in the other one.</small>
+      </label>
+      <label class="check"><input id="setting-guardEnabled" type="checkbox"> <span data-i18n="options.guardEnabled">Show the account guard on AWS console pages</span></label>
+      <label class="check"><input id="setting-guardShowUnregistered" type="checkbox"> <span data-i18n="options.guardShowUnregistered">Also mark accounts that are not in my list</span></label>
+      <label class="check"><input id="setting-guardTitlePrefix" type="checkbox"> <span data-i18n="options.guardTitlePrefix">Prefix tab titles of protected accounts with the account name</span></label>
     </section>
   </main>
 
@@ -68,13 +79,13 @@
       <h2 id="editor-title">Add account</h2>
 
       <label class="field">
-        <span>Name</span>
+        <span data-i18n="editor.name">Name</span>
         <input name="name" maxlength="64" autocomplete="off" placeholder="shop-prod">
         <small class="error" data-error-for="name"></small>
       </label>
 
       <label class="field">
-        <span>Sign-in method</span>
+        <span data-i18n="editor.provider">Sign-in method</span>
         <select name="provider"></select>
         <small id="provider-help" class="muted"></small>
         <small class="error" data-error-for="provider"></small>
@@ -84,28 +95,36 @@
 
       <div class="row-2">
         <label class="field">
-          <span>Environment</span>
-          <select name="env"></select>
+          <span data-i18n="editor.tag">Tag</span>
+          <input name="tag" maxlength="20" autocomplete="off" list="tag-suggestions" placeholder="prod">
+          <small class="muted" data-i18n="editor.tagHelp"></small>
+          <small class="error" data-error-for="tag"></small>
         </label>
         <label class="field">
-          <span>Group</span>
-          <input name="group" maxlength="40" autocomplete="off" placeholder="Optional">
+          <span data-i18n="editor.group">Group</span>
+          <input name="group" maxlength="40" autocomplete="off" placeholder="Optional" data-i18n-placeholder="editor.groupPlaceholder">
+          <small class="muted" data-i18n="editor.groupHelp"></small>
           <small class="error" data-error-for="group"></small>
         </label>
       </div>
 
+      <label class="check">
+        <input name="guarded" type="checkbox"> <strong data-i18n="editor.guarded">Protected account</strong>
+      </label>
+      <p class="muted check-help" data-i18n="editor.guardedHelp"></p>
+
       <div class="color-row">
-        <label class="check"><input name="useEnvColor" type="checkbox" checked> Use the environment color</label>
-        <input name="color" type="color" aria-label="Custom color">
+        <label class="check"><input name="autoColor" type="checkbox" checked> <span data-i18n="editor.autoColor">Pick the color from the group or name</span></label>
+        <input name="color" type="color" aria-label="Custom color" data-i18n-aria-label="editor.customColor">
       </div>
 
-      <p class="preview"><span class="muted">Opens</span> <code id="url-preview">—</code></p>
+      <p class="preview"><span class="muted" data-i18n="editor.opens">Opens</span> <code id="url-preview">—</code></p>
 
       <div class="actions">
         <small class="error" data-error-for="form"></small>
         <span class="spacer"></span>
-        <button id="editor-cancel" type="button">Cancel</button>
-        <button class="primary" type="submit">Save</button>
+        <button id="editor-cancel" type="button" data-i18n="editor.cancel">Cancel</button>
+        <button class="primary" type="submit" data-i18n="editor.save">Save</button>
       </div>
     </form>
   </dialog>

@@ -1,6 +1,7 @@
+import { applyTranslations } from '../i18n/dom.js';
+import { resolveLanguage, setLanguage, t } from '../i18n/index.js';
 import { formatAccountId } from '../lib/account.js';
 import { readableTextColor } from '../lib/color.js';
-import { getEnvironment } from '../lib/env.js';
 import { identityFromHost } from '../lib/identity.js';
 import { matchProfile } from '../lib/match.js';
 import { MSG } from '../lib/messages.js';
@@ -34,30 +35,30 @@ function element(tag, className, text) {
 }
 
 function metaLine(profile) {
-  const env = getEnvironment(profile.env);
   const account = profileAccount(profile);
-  return [env.label, getProvider(profile.provider)?.short, account && formatAccountId(account), profile.group]
-    .filter(Boolean)
-    .join(' · ');
+  return [getProvider(profile.provider)?.short, account && formatAccountId(account), profile.group].filter(Boolean).join(' · ');
 }
 
 function renderRow(profile, index) {
   const color = profileColor(profile);
-  const env = getEnvironment(profile.env);
-  const row = element('li', 'row');
+  const row = element('li', profile.guarded ? 'row guarded' : 'row');
   row.setAttribute('role', 'option');
   row.setAttribute('aria-selected', String(index === selected));
   row.dataset.index = String(index);
+  if (profile.guarded) row.title = t('popup.guarded');
 
   const dot = element('span', 'dot');
   dot.style.background = color;
   const main = element('span', 'main');
   main.append(element('span', 'name', profile.name), element('span', 'meta', metaLine(profile)));
-  const badge = element('span', 'badge', env.short);
-  badge.style.background = color;
-  badge.style.color = readableTextColor(color);
-  row.append(dot, main, badge);
-  if (profile.id === currentProfileId) row.append(element('span', 'here', 'current'));
+  row.append(dot, main);
+  if (profile.tag) {
+    const badge = element('span', 'badge', profile.tag);
+    badge.style.background = color;
+    badge.style.color = readableTextColor(color);
+    row.append(badge);
+  }
+  if (profile.id === currentProfileId) row.append(element('span', 'here', t('popup.current')));
   return row;
 }
 
@@ -79,15 +80,25 @@ function render() {
   ui.list.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
 }
 
+function openOptions(hash = '') {
+  chrome.tabs.create({ url: chrome.runtime.getURL(`src/options/options.html${hash}`) });
+  window.close();
+}
+
 function renderCurrent(identity) {
   if (!identity) return;
   const profile = profiles.find((p) => p.id === currentProfileId);
   const account = formatAccountId(identity.accounts[0]);
-  ui.current.replaceChildren('This tab: ');
+  ui.current.replaceChildren(`${t('popup.thisTab')}: `);
   if (profile) {
-    ui.current.append(element('strong', '', `${getEnvironment(profile.env).short} · ${profile.name}`), ` (${account})`);
+    ui.current.append(element('strong', '', profile.tag ? `${profile.tag} · ${profile.name}` : profile.name), ` (${account})`);
   } else {
-    ui.current.append(element('strong', '', account), ' (not in your list)');
+    ui.current.append(element('strong', '', account), ` (${t('popup.notInList')}) `);
+    const add = element('button', 'link-btn', t('popup.addThis'));
+    add.type = 'button';
+    add.title = t('popup.addThisTitle');
+    add.addEventListener('click', () => openOptions(`#add=${encodeURIComponent(identity.accounts[0])}`));
+    ui.current.append(add);
   }
   ui.current.hidden = false;
 }
@@ -129,7 +140,7 @@ document.addEventListener('keydown', (event) => {
     event.preventDefault();
     selected = moveSelection(selected, event.key === 'ArrowDown' ? 1 : -1, visible.length);
     render();
-  } else if (event.key === 'Enter' && visible.length) {
+  } else if (event.key === 'Enter' && visible.length && !(event.target instanceof HTMLButtonElement)) {
     event.preventDefault();
     open(visible[Math.max(selected, 0)], inverted(event));
   } else if (event.key === 'Escape' && ui.search.value) {
@@ -149,12 +160,13 @@ ui.list.addEventListener('auxclick', (event) => {
   if (event.button === 1) onRowClick(event);
 });
 
-for (const id of ['open-options', 'add-first']) {
-  $(id).addEventListener('click', () => chrome.runtime.openOptionsPage());
-}
+$('open-options').addEventListener('click', () => chrome.runtime.openOptionsPage());
+$('add-first').addEventListener('click', () => chrome.runtime.openOptionsPage());
 
 async function init() {
   [profiles, settings] = await Promise.all([store.loadProfiles(), store.loadSettings()]);
+  setLanguage(resolveLanguage(settings.language, chrome.i18n.getUILanguage()));
+  applyTranslations(document);
   render();
   ui.search.focus();
   const current = await detectCurrent(await activeTab());

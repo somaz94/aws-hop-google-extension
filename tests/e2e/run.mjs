@@ -10,6 +10,7 @@ import { homedir, tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
+import { colorFor } from '../../src/lib/tag.js';
 
 const ROOT = realpathSync(join(dirname(fileURLToPath(import.meta.url)), '..', '..'));
 const CACHE = join(process.env.XDG_CACHE_HOME ?? join(homedir(), '.cache'), 'aws-hop-e2e');
@@ -17,6 +18,10 @@ const CACHE = join(process.env.XDG_CACHE_HOME ?? join(homedir(), '.cache'), 'aws
 const AWS_CONFIG = `
 [profile shop-prod]
 aws_account_id = 111122223333
+tag = prod
+
+[profile terraform-shop-prod]
+aws_account_id = 1111-2222-3333
 
 [profile shop-dev]
 role_arn = arn:aws:iam::444455556666:role/Developer
@@ -203,18 +208,27 @@ async function guardOn(cdp, url, expectedLabel) {
   return { page, guard };
 }
 
-async function importAccounts(options) {
+async function importAccounts(options, config) {
   return options.eval(`(async () => {
-    document.getElementById('import-text').value = ${JSON.stringify(AWS_CONFIG)};
-    document.getElementById('import-merge').click();
     const box = document.getElementById('import-result');
+    box.hidden = true;
+    document.getElementById('import-text').value = ${JSON.stringify(config)};
+    document.getElementById('import-merge').click();
     for (let i = 0; i < 50 && box.hidden; i += 1) await new Promise((r) => setTimeout(r, 100));
     return {
-      result: box.textContent,
+      result: box.firstChild.textContent,
+      skipped: [...box.querySelectorAll('li')].map((li) => li.textContent),
       rows: [...document.querySelectorAll('.profile .name')].map((n) => n.textContent),
     };
   })()`);
 }
+
+/** Changes a select on the options page the way a user would, firing its change event. */
+const choose = (options, id, value) => options.eval(`(() => {
+  const select = document.getElementById(${JSON.stringify(id)});
+  select.value = ${JSON.stringify(value)};
+  select.dispatchEvent(new Event('change', { bubbles: true }));
+})()`);
 
 /** Opens the popup fresh each time: after opening an account it closes itself, as the real popup does. */
 async function popupOpens(cdp, base, query, expectedUrl) {
@@ -258,35 +272,51 @@ async function run(cdp) {
 
   console.log('Options page');
   const options = await cdp.open(`${base}/options/options.html`);
-  check('loads as the extension page', await options.eval('document.title'), 'AWS Hop settings');
-  const imported = await importAccounts(options);
-  check('imports ~/.aws/config through the UI', imported, { result: 'Added 3, updated 0.', rows: ['shop-prod', 'shop-dev', 'data-sso'] });
-  const stored = await options.eval(`chrome.storage.sync.get(null).then((items) => Object.keys(items).filter((k) => k.startsWith('profile:')).length)`);
-  check('writes one sync item per account', stored, 3);
+  const uiLanguage = await options.eval('chrome.i18n.getUILanguage()');
+  const autoTitle = uiLanguage.toLowerCase().startsWith('ko') ? 'AWS Hop 설정' : 'AWS Hop settings';
+  check(`follows the browser language (${uiLanguage}) by default`, await waitFor(() => options.eval('document.title === ' + JSON.stringify(autoTitle) + ' && document.title'), 'the translated title').catch(() => null), autoTitle);
+  await choose(options, 'setting-language', 'en');
+  check('switches to English from the settings', await waitFor(() => options.eval(`document.title === 'AWS Hop settings' && document.title`), 'English').catch(() => null), 'AWS Hop settings');
+  check('opens the CLI helper while the list is empty', await options.eval(`document.getElementById('cli-helper').open && document.getElementById('cli-command').textContent.startsWith('for p in $(aws configure list-profiles)')`), true);
+
+  const imported = await importAccounts(options, AWS_CONFIG);
+  check('imports ~/.aws/config once per account', imported, {
+    result: 'Added 3, updated 0, 0 already in the list.',
+    skipped: ['terraform-shop-prod: signs in to the same place as shop-prod, which is imported instead'],
+    rows: ['shop-prod', 'shop-dev', 'data-sso'],
+  });
+  const again = await importAccounts(options, AWS_CONFIG);
+  check('importing the same config again updates in place', [again.result, again.rows.length], ['Added 0, updated 3, 0 already in the list.', 3]);
+  const copy = await importAccounts(options, '[profile shop-prod-copy]\naws_account_id = 111122223333');
+  check('a profile for an account already in the list is not added', [copy.result, copy.skipped, copy.rows.length], [
+    'Added 0, updated 0, 1 already in the list.', ['shop-prod-copy: already in your list as shop-prod'], 3,
+  ]);
+  const stored = await options.eval(`chrome.storage.sync.get(null).then((items) => Object.values(items).filter((v) => v && v.fields).map((p) => [p.name, p.tag, p.guarded]))`);
+  check('stores tags and protects production by name', stored.sort(), [['data-sso', 'test', false], ['shop-dev', '', false], ['shop-prod', 'prod', true]]);
 
   console.log('Guard');
   const nav = encodeURIComponent(JSON.stringify({ loginDisplayNameAccount: '1111-2222-3333', loginDisplayNameUser: 'jane' }));
-  const prod = await guardOn(cdp, `https://us-east-1.console.aws.amazon.com/console/home?nav=${nav}&delay=800`, 'PROD · shop-prod');
+  const prod = await guardOn(cdp, `https://us-east-1.console.aws.amazon.com/console/home?nav=${nav}&delay=800`, 'prod · shop-prod');
   check('reads ConsoleNavService from the main world, late', prod.guard, {
-    label: 'PROD · shop-prod',
+    label: 'prod · shop-prod',
     frame: true,
-    tooltip: 'AWS Hop: PROD · shop-prod (1111-2222-3333), detected from the console navigation. Click to minimize.',
-    title: '[PROD] Console Home',
+    tooltip: 'AWS Hop: prod · shop-prod (1111-2222-3333), detected from the console navigation. Click to minimize.',
+    title: '[shop-prod] Console Home',
   });
   check('the bridge wrote only the account fields', await prod.page.eval(`document.documentElement.getAttribute('data-aws-hop-nav')`),
     JSON.stringify({ loginDisplayNameAccount: '1111-2222-3333', loginDisplayNameUser: 'jane' }));
 
-  const dom = await guardOn(cdp, 'https://eu-west-1.console.aws.amazon.com/ec2/home?dom=4444-5555-6666', 'DEV · shop-dev');
+  const dom = await guardOn(cdp, 'https://eu-west-1.console.aws.amazon.com/ec2/home?dom=4444-5555-6666', 'shop-dev');
   check('falls back to the page header', [dom.guard?.label, dom.guard?.frame, dom.guard?.title, dom.guard?.tooltip.includes('page header')],
-    ['DEV · shop-dev', false, 'Console Home', true]);
+    ['shop-dev', false, 'Console Home', true]);
 
-  const host = await guardOn(cdp, 'https://777788889999-abcd1234.us-east-1.console.aws.amazon.com/console/home', 'TEST · data-sso');
-  check('falls back to the multi-session host', [host.guard?.label, host.guard?.tooltip.includes('multi-session URL')], ['TEST · data-sso', true]);
+  const host = await guardOn(cdp, 'https://777788889999-abcd1234.us-east-1.console.aws.amazon.com/console/home', 'test · data-sso');
+  check('falls back to the multi-session host', [host.guard?.label, host.guard?.tooltip.includes('multi-session URL')], ['test · data-sso', true]);
 
-  const unknown = await guardOn(cdp, 'https://999999999999-zzzz9999.us-east-1.console.aws.amazon.com/', 'Unregistered account');
-  check('marks an unregistered account', unknown.guard?.label, 'Unregistered account');
+  const unknown = await guardOn(cdp, 'https://999999999999-zzzz9999.us-east-1.console.aws.amazon.com/', 'Account not in your list');
+  check('marks an account that is not in the list', unknown.guard?.label, 'Account not in your list');
 
-  console.log('Messaging and live settings');
+  console.log('Messaging and live changes');
   const replies = await options.eval(`(async () => {
     const tabs = await chrome.tabs.query({});
     const replies = [];
@@ -302,6 +332,21 @@ async function run(cdp) {
     '111122223333:nav:matched', '444455556666:dom:matched', '777788889999:host:matched', '999999999999:host:none',
   ]);
 
+  await options.eval(`(() => {
+    const input = document.querySelector('.profile:nth-child(2) [data-action="tag"]');
+    input.value = 'qa';
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  })()`);
+  const retagged = await waitFor(async () => ((await dom.page.eval(GUARD))?.label === 'qa · shop-dev' ? 'qa · shop-dev' : null), 'the new tag').catch(() => null);
+  check('a tag typed into the list shows up in the open console tab', retagged, 'qa · shop-dev');
+
+  await options.eval(`document.querySelector('.profile:nth-child(2) [data-action="guarded"]').click()`);
+  const guardedNow = await waitFor(async () => {
+    const state = await dom.page.eval(GUARD);
+    return state?.frame ? state : null;
+  }, 'the frame').catch(() => null);
+  check('protecting an account from the list frames its console tab', [guardedNow?.frame, guardedNow?.title], [true, '[shop-dev] Console Home']);
+
   await options.eval(`document.getElementById('setting-guardEnabled').click()`);
   const hidden = await waitFor(async () => {
     const [guard, title] = await prod.page.eval(`[!!document.querySelector('aws-hop-guard'), document.title]`);
@@ -310,15 +355,35 @@ async function run(cdp) {
   check('turning the guard off removes it and the title prefix in open tabs', hidden, 'Console Home');
   await options.eval(`document.getElementById('setting-guardEnabled').click()`);
   const back = await waitFor(() => prod.page.eval(GUARD), 'the guard to come back').catch(() => null);
-  check('turning it back on restores it', back?.title, '[PROD] Console Home');
+  check('turning it back on restores it', back?.title, '[shop-prod] Console Home');
+
+  console.log('Add this account');
+  const deepLink = await cdp.open(`${base}/options/options.html#add=999999999999`);
+  const prefilled = await waitFor(() => deepLink.eval(`document.getElementById('editor').open && ({
+    provider: document.querySelector('[name="provider"]').value,
+    account: document.querySelector('[name="field:account"]').value,
+    hash: location.hash,
+  })`), 'the prefilled editor').catch(() => null);
+  check('the popup\'s add link opens the editor with the account filled in', prefilled, { provider: 'iam-user', account: '999999999999', hash: '' });
+  await deepLink.close();
 
   console.log('Popup');
   const popup = await cdp.open(`${base}/popup/popup.html`);
   check('lists every account', await waitFor(() => popup.eval(`document.querySelectorAll('.row').length || null`), 'popup rows'), 3);
-  await popupOpens(cdp, base, 'shop-dev', 'https://signin.aws.amazon.com/switchrole?account=444455556666&roleName=Developer&displayName=shop-dev&color=1d8102');
+  check('marks protected accounts', await popup.eval(`[...document.querySelectorAll('.row.guarded .name')].map((n) => n.textContent).sort()`), ['shop-dev', 'shop-prod']);
+  const devColor = colorFor('shop').slice(1);
+  await popupOpens(cdp, base, 'shop-dev', `https://signin.aws.amazon.com/switchrole?account=444455556666&roleName=Developer&displayName=shop-dev&color=${devColor}`);
   check('closes itself after opening an account', (await cdp.pageUrls()).filter((url) => url.endsWith('/popup/popup.html')).length, 1);
   await popupOpens(cdp, base, 'data', 'https://example.awsapps.com/start/#/console?account_id=777788889999&role_name=ReadOnly');
   await popupOpens(cdp, base, 'shop-prod', 'https://111122223333.signin.aws.amazon.com/console');
+
+  console.log('Korean');
+  await choose(options, 'setting-language', 'ko');
+  check('the options page switches without a reload', await waitFor(() => options.eval(`document.querySelector('[data-i18n="options.accounts"]').textContent === '계정' && document.title`), 'Korean options').catch(() => null), 'AWS Hop 설정');
+  const koGuard = await waitFor(async () => ((await unknown.page.eval(GUARD))?.label === '목록에 없는 계정' ? unknown.page.eval(GUARD) : null), 'the Korean guard').catch(() => null);
+  check('open console tabs switch too', koGuard?.tooltip, 'AWS Hop: 목록에 없는 계정 (9999-9999-9999). 멀티 세션 URL에서 감지했습니다. 클릭하면 접힙니다.');
+  const koPopup = await cdp.open(`${base}/popup/popup.html`);
+  check('the popup opens in Korean', await waitFor(() => koPopup.eval(`document.getElementById('search').placeholder === '계정 검색' && document.documentElement.lang`), 'Korean popup').catch(() => null), 'ko');
 
   console.log('Errors');
   check('no page exceptions, console errors or guard start-up warnings', cdp.problems, []);

@@ -8,7 +8,7 @@ AWS Hop does not collect, transmit or sell any data.
 
 Only what you enter on the options page or import:
 
-- account names, groups, environments and colors
+- account names, tags, groups, colors and which accounts are protected
 - AWS account IDs or aliases
 - IAM role names, IAM Identity Center permission set names and access portal URLs
 - custom sign-in URLs
@@ -26,7 +26,7 @@ In `chrome.storage.sync`. Chrome keeps it in your browser profile and, if you ar
 
 ## What the extension reads
 
-On `*.console.aws.amazon.com` pages, the production guard reads the account ID, account alias and role name that the console shows for the current session, to decide which label to draw. That information stays in the page; it is not stored or sent anywhere.
+On `*.console.aws.amazon.com` pages, the account guard reads the account ID, account alias and role name that the console shows for the current session, to decide which label to draw. That information stays in the page; it is not stored or sent anywhere.
 
 When you open the popup, it reads the address of the current tab to mark the account you are in.
 

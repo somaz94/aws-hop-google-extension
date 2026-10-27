@@ -1,3 +1,5 @@
+import { t } from '../i18n/index.js';
+
 export const EXPORT_FORMAT = 'aws-hop';
 export const EXPORT_VERSION = 1;
 
@@ -16,14 +18,14 @@ export function profilesFromJson(text) {
   try {
     data = JSON.parse(text);
   } catch (err) {
-    throw new Error(`Invalid JSON: ${err.message}`);
+    throw new Error(t('import.error.json', { detail: err.message }));
   }
   if (Array.isArray(data)) return { profiles: data, skipped: [] };
   if (data && typeof data === 'object' && data.format === EXPORT_FORMAT) {
     if (data.version > EXPORT_VERSION) {
-      throw new Error(`This file was exported by a newer version (format version ${data.version})`);
+      throw new Error(t('import.error.newer', { version: data.version }));
     }
     if (Array.isArray(data.profiles)) return { profiles: data.profiles, skipped: [] };
   }
-  throw new Error('Expected an AWS Hop export or an array of profiles');
+  throw new Error(t('import.error.shape'));
 }

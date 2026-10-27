@@ -1,9 +1,13 @@
+import { LANGUAGE_SETTINGS } from '../i18n/index.js';
+import { normalizeProfile } from './profile.js';
+
 // One storage item per profile: chrome.storage.sync caps a single item at 8 KB, so one array would cap the list.
 const PROFILE_PREFIX = 'profile:';
 const ORDER_KEY = 'profileOrder';
 const SETTINGS_KEY = 'settings';
 
 export const DEFAULT_SETTINGS = Object.freeze({
+  language: 'auto',
   openIn: 'new-tab',
   guardEnabled: true,
   guardShowUnregistered: true,
@@ -17,6 +21,7 @@ const profileKey = (id) => `${PROFILE_PREFIX}${id}`;
 export function normalizeSettings(raw) {
   const settings = { ...DEFAULT_SETTINGS };
   if (!raw || typeof raw !== 'object') return settings;
+  if (LANGUAGE_SETTINGS.includes(raw.language)) settings.language = raw.language;
   if (OPEN_IN.includes(raw.openIn)) settings.openIn = raw.openIn;
   for (const key of ['guardEnabled', 'guardShowUnregistered', 'guardTitlePrefix']) {
     if (typeof raw[key] === 'boolean') settings[key] = raw[key];
@@ -39,8 +44,9 @@ export function profilesFromItems(items) {
 }
 
 export function createStore({ area = globalThis.chrome?.storage?.sync, onChanged = globalThis.chrome?.storage?.onChanged, areaName = 'sync' } = {}) {
+  // Normalized on every read, so an account saved by an older version reaches every page in today's shape.
   async function loadProfiles() {
-    return profilesFromItems(await area.get(null));
+    return profilesFromItems(await area.get(null)).map((profile) => normalizeProfile(profile));
   }
 
   async function writeOrder(ids) {

@@ -2,7 +2,8 @@
 // Loads the unpacked extension into Chrome for Testing (branded Chrome ignores --load-extension), routes
 // every host to a local HTTPS server that plays the AWS console and the sign-in pages, and drives the
 // options page, the popup and the guard over the DevTools protocol. Needs Node 22+, openssl and network
-// access the first time, to download Chrome for Testing. CHROME_BIN skips the download.
+// access the first time, to download Chrome for Testing. AWS_HOP_E2E_CHROME skips the download; not
+// CHROME_BIN, which GitHub's Ubuntu runners point at branded Chrome.
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs';
 import { createServer } from 'node:https';
@@ -44,7 +45,7 @@ function check(name, actual, expected) {
 /* ---------- environment ---------- */
 
 function chromeBinary() {
-  if (process.env.CHROME_BIN) return process.env.CHROME_BIN;
+  if (process.env.AWS_HOP_E2E_CHROME) return process.env.AWS_HOP_E2E_CHROME;
   const out = execFileSync('npx', ['--yes', '@puppeteer/browsers', 'install', 'chrome@stable', '--path', CACHE], { encoding: 'utf8' });
   const match = /^chrome@\S+ (.+)$/m.exec(out);
   if (!match) throw new Error(`Could not find the Chrome for Testing path in:\n${out}`);
@@ -403,6 +404,7 @@ let chrome;
 let server;
 try {
   const binary = chromeBinary();
+  console.log(`Browser: ${binary}`);
   server = await startServer(certificate(work));
   const launched = await launchChrome(binary, join(work, 'profile'), server.address().port);
   chrome = launched.chrome;

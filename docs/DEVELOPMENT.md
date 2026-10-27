@@ -69,7 +69,7 @@ Detection relies on console internals that AWS does not document. If the guard s
 
 `make e2e` (`tests/e2e/run.mjs`) checks what unit tests cannot: that Chrome accepts the manifest, that the main-world bridge and the module loader run on console pages, that `web_accessible_resources` lets the guard's imports load, and that the pages work against real `chrome.storage` and `chrome.tabs`.
 
-- It downloads Chrome for Testing into `~/.cache/aws-hop-e2e` on the first run, because branded Chrome ignores `--load-extension`. Set `CHROME_BIN` to use a Chromium you already have
+- It downloads Chrome for Testing into `~/.cache/aws-hop-e2e` on the first run, because branded Chrome ignores `--load-extension`. Set `AWS_HOP_E2E_CHROME` to use a Chromium you already have (not `CHROME_BIN`, which GitHub's Ubuntu runners point at branded Chrome)
 - Every host name resolves to a local HTTPS server with a throwaway certificate, so `*.console.aws.amazon.com` serves mock console pages and the sign-in URLs the popup opens never leave the machine
 - The browser is driven over the DevTools protocol with Node's built-in `WebSocket`, so the test adds no dependency
 - It needs Node 22 or later and `openssl`

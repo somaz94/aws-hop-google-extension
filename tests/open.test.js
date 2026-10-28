@@ -1,5 +1,6 @@
 import { describe, test, expect } from '@jest/globals';
-import { createGuardOpener, openProfile } from '../src/background/open.js';
+import { createGuardOpener } from '../src/background/open.js';
+import { openProfile } from '../src/lib/open.js';
 import { normalizeProfile } from '../src/lib/profile.js';
 import { createRecentStore, RECENT_KEY } from '../src/lib/recent.js';
 import { createSessionStore } from '../src/lib/sessions.js';

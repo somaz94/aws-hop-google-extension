@@ -4,7 +4,8 @@ import { bulkEdit, keepSelected, moveBy, moveNextTo, selectionState, selectRange
 import { buildProfileUrl, GROUP_MAX, NAME_MAX, normalizeProfile, profileColor, profileMeta, validateProfile } from '../lib/profile.js';
 import { createRecentStore } from '../lib/recent.js';
 import { filterProfiles } from '../lib/search.js';
-import { createStore, DEFAULT_SETTINGS } from '../lib/store.js';
+import { serial } from '../lib/serial.js';
+import { createStore, DEFAULT_SETTINGS, saveSetting } from '../lib/store.js';
 import { SUGGESTED_TAGS, TAG_MAX } from '../lib/tag.js';
 import { createThemer } from '../lib/theme.js';
 import { accountIdCommand, CLI_SHELLS, getShell, shellForPlatform } from '../importers/accountIdCommand.js';
@@ -292,19 +293,13 @@ list.addEventListener('dragend', endDrag);
 
 const selectedProfiles = () => shown.filter((profile) => selected.has(profile.id));
 
-// One bulk save at a time, each on freshly loaded profiles, so a second quick action cannot write back what the first changed.
-let bulkSaved = Promise.resolve();
-
-function bulkSave(changes) {
-  const ids = [...selected];
-  const save = async () => {
-    const next = bulkEdit(await store.loadProfiles(), ids, changes);
-    if (next.length) await store.saveProfiles(next);
-    await reload();
-  };
-  bulkSaved = bulkSaved.then(save, save);
-  return bulkSaved;
-}
+// Each save loads the profiles afresh, so a second quick action cannot write back what the first changed.
+const saveBulk = serial(async (ids, changes) => {
+  const next = bulkEdit(await store.loadProfiles(), ids, changes);
+  if (next.length) await store.saveProfiles(next);
+  await reload();
+});
+const bulkSave = (changes) => saveBulk([...selected], changes);
 
 $('bulk-set-tag').addEventListener('click', () => bulkSave({ tag: $('bulk-tag').value }));
 $('bulk-set-group').addEventListener('click', () => bulkSave({ group: $('bulk-group').value }));
@@ -657,21 +652,12 @@ async function loadSettings() {
   applyLanguage(settings);
 }
 
-// One save at a time: each reloads the settings, and saving refreshes the inputs, so two quick changes could undo each other.
-let settingsSaved = Promise.resolve();
+const saveSettingInOrder = serial((key, value) => saveSetting(store, key, value, { recent: createRecentStore() }));
 
 for (const key of SETTING_INPUTS) {
   $(`setting-${key}`).addEventListener('change', () => {
     const input = $(`setting-${key}`);
-    const value = input.type === 'checkbox' ? input.checked : input.value;
-    const save = async () => {
-      const settings = await store.loadSettings();
-      settings[key] = value;
-      await store.saveSettings(settings);
-      // Turning the recent list off also forgets it, so nothing is kept for a feature that is off.
-      if (key === 'showRecent' && !settings.showRecent) await createRecentStore().clear();
-    };
-    settingsSaved = settingsSaved.then(save, save);
+    saveSettingInOrder(key, input.type === 'checkbox' ? input.checked : input.value);
   });
 }
 

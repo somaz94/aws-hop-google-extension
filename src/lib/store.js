@@ -36,6 +36,14 @@ export function normalizeSettings(raw) {
   return settings;
 }
 
+/** Saves one setting; turning the recent list off also forgets it, so nothing is kept for a feature that is off. */
+export async function saveSetting(store, key, value, { recent }) {
+  const settings = await store.loadSettings();
+  settings[key] = value;
+  await store.saveSettings(settings);
+  if (key === 'showRecent' && !settings.showRecent) await recent.clear();
+}
+
 /** Profiles in the stored order; profiles missing from the order (e.g. written by another device) go last. */
 export function profilesFromItems(items) {
   const order = Array.isArray(items[ORDER_KEY]) ? items[ORDER_KEY] : [];

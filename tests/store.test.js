@@ -1,5 +1,5 @@
 import { describe, test, expect, jest } from '@jest/globals';
-import { createStore, DEFAULT_SETTINGS, normalizeSettings, profilesFromItems } from '../src/lib/store.js';
+import { createStore, DEFAULT_SETTINGS, normalizeSettings, profilesFromItems, saveSetting } from '../src/lib/store.js';
 import { createFakeStorage } from './helpers/fakeStorage.js';
 
 const profile = (id, name = id) => ({ id, name, provider: 'iam-user', tag: '', guarded: false, color: null, group: '', fields: { account: '111122223333' } });
@@ -153,5 +153,25 @@ describe('onChange', () => {
     store.onChange(listener);
     storage.emit({ settings: {} });
     expect(listener).not.toHaveBeenCalled();
+  });
+});
+
+describe('saveSetting', () => {
+  test('saves one setting and keeps the others', async () => {
+    const { store } = setup();
+    const recent = { clear: jest.fn() };
+    await saveSetting(store, 'openIn', 'current-tab', { recent });
+    await saveSetting(store, 'theme', 'dark', { recent });
+    expect(await store.loadSettings()).toEqual({ ...DEFAULT_SETTINGS, openIn: 'current-tab', theme: 'dark' });
+    expect(recent.clear).not.toHaveBeenCalled();
+  });
+
+  test('turning the recent list off also forgets it, turning it on does not', async () => {
+    const { store } = setup();
+    const recent = { clear: jest.fn() };
+    await saveSetting(store, 'showRecent', false, { recent });
+    expect(recent.clear).toHaveBeenCalledTimes(1);
+    await saveSetting(store, 'showRecent', true, { recent });
+    expect(recent.clear).toHaveBeenCalledTimes(1);
   });
 });

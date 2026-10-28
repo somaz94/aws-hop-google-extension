@@ -1,7 +1,7 @@
 import { applyLanguageSetting, t } from '../i18n/index.js';
+import { openProfile } from '../lib/open.js';
 import { profileLabel } from '../lib/profile.js';
 import { filterProfiles, resolveOpenTarget } from '../lib/search.js';
-import { openProfile } from './open.js';
 
 export const SUGGEST_MAX = 6;
 

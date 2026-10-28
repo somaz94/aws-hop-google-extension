@@ -56,7 +56,7 @@ Content scripts declared in the manifest cannot be ES modules, and the guard nee
 
 On a multi-session host the guard also reports which account the page belongs to (`MSG.SESSION_SEEN`, the account only); the worker takes the session's origin from `sender.url`, never from the message, and keeps it with the time it was seen in `chrome.storage.local` for `openUrlFor` in the popup, the address bar and the guard menu. An entry is ignored 12 hours after it was last seen; no console session lasts longer from sign-in, so a live session is never forgotten early.
 
-Clicking the label opens `menu.js`, built on demand and removed on close so the account list is in the page only while it is shown; it stops key events so typing never triggers console shortcuts. A pick goes to the worker as `MSG.OPEN_PROFILE` (the account id and the modifier only), and `open.js` opens it with the same rules as the popup and the address bar.
+Clicking the label opens `menu.js`, built on demand and removed on close so the account list is in the page only while it is shown; it stops key events so typing never triggers console shortcuts. A pick goes to the worker as `MSG.OPEN_PROFILE` (the account id and the modifier only), and the worker opens it through `src/lib/open.js`, the one `openProfile` the popup and the address bar use too.
 
 The guard also sends its toolbar badge to the service worker (`MSG.SET_BADGE`) whenever what it shows changes, and an empty one on stop. The worker sets it for the sending tab only and clears it when the tab starts loading a new page; `tabs.onUpdated` reports that status without the `tabs` permission, so the badge adds none.
 

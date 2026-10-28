@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "클릭 한 번으로 AWS 콘솔 계정을 전환합니다. IAM 사용자, Switch Role, IAM Identity Center, SAML을 지원하고 Prod 계정은 빨간 테두리로 표시합니다."
+    "message": "AWS 콘솔 계정을 클릭 한 번으로 전환하고 Prod 계정을 표시하는 도구"
   },
   "commandOpen": {
     "message": "AWS Hop 열기"

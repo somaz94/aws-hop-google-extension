@@ -20,6 +20,7 @@ export function attachBulkBar({ store, reload, selection, undo, order }) {
 
   $('bulk-set-tag').addEventListener('click', () => bulkSave({ tag: $('bulk-tag').value }));
   $('bulk-set-group').addEventListener('click', () => bulkSave({ group: $('bulk-group').value }));
+  $('bulk-ungroup').addEventListener('click', () => bulkSave({ group: '' }));
   $('bulk-protect').addEventListener('click', () => bulkSave({ guarded: true }));
   $('bulk-unprotect').addEventListener('click', () => bulkSave({ guarded: false }));
 

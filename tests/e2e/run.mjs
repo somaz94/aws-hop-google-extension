@@ -623,9 +623,9 @@ async function run(cdp) {
     picks[0].click();
     picks[2].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, shiftKey: true }));
   })()`);
-  check('Shift-click selects every row up to it', await selectionView(), ['3 selected', true, false]);
+  check('Shift-click selects every row up to it', await selectionView(), ['Edit the 3 selected', true, false]);
   await options.eval(`${picks}[0].click()`);
-  check('and the select-all box shows a partial selection', await selectionView(), ['2 selected', false, true]);
+  check('and the select-all box shows a partial selection', await selectionView(), ['Edit the 2 selected', false, true]);
 
   const bulk = (fields, button) => options.eval(`(() => {
     for (const [id, value] of Object.entries(${JSON.stringify(fields)})) document.getElementById(id).value = value;
@@ -659,11 +659,15 @@ async function run(cdp) {
     const colors = await groupColors();
     return colors[1] === '#123456' ? colors : null;
   }, 'the group color').catch(() => groupColors()), [null, '#123456', '#123456']);
-  await bulk({ 'bulk-group': '' }, 'bulk-set-group');
+  await options.eval(`document.querySelector('.group-head[data-group="squad"] [data-action="ungroup"]').click()`);
+  check('Ungroup takes every account out of the group, with the color it gave them', await waitFor(async () => {
+    const [rows, colors] = [await storedRows(), await groupColors()];
+    return rows.every(([, group]) => group === '') ? colors : null;
+  }, 'the ungroup').catch(() => groupColors()), [null, null, null]);
   await bulk({}, 'bulk-unprotect');
-  check('an empty group clears it, and unprotect lifts the protection', await storedBecome([['shop-prod', '', true], ['shop-dev', '', false], ['data-sso', '', false]], 'bulk clear'),
+  check('and unprotect lifts the protection', await storedBecome([['shop-prod', '', true], ['shop-dev', '', false], ['data-sso', '', false]], 'bulk clear'),
     [['shop-prod', '', true], ['shop-dev', '', false], ['data-sso', '', false]]);
-  check('the selection survives the saves', await selectionView(), ['2 selected', false, true]);
+  check('the selection survives the saves', await selectionView(), ['Edit the 2 selected', false, true]);
   await options.eval(`document.getElementById('bulk-clear').click()`);
   check('Clear selection hides the bulk bar', await selectionView(), ['', false, false]);
 
@@ -671,7 +675,7 @@ async function run(cdp) {
   await options.eval(`document.getElementById('import-text').value = ''`);
   await searchList('tmp');
   await options.eval(`document.getElementById('select-all').click()`);
-  check('select-all picks only the rows the search shows', await selectionView(), ['2 selected', true, false]);
+  check('select-all picks only the rows the search shows', await selectionView(), ['Edit the 2 selected', true, false]);
   await options.eval(`window.confirm = () => true; document.getElementById('bulk-delete').click()`);
   await searchList('');
   check('deletes the selected accounts at once', (await storedBecome([['shop-prod', '', true], ['shop-dev', '', false], ['data-sso', '', false]], 'the bulk delete')).map(([name]) => name),

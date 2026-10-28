@@ -48,7 +48,7 @@ Environments differ from project to project, so AWS Hop does not impose any. Eac
 
 The tag and the protected flag can be changed straight from the account list in the options. The list can be searched, and reordered by dragging a row by its handle or with its arrow buttons; reordering pauses while a search is active, because results are ranked. Tick several accounts, or Shift-click to tick every account up to one, to set their tag or group, protect or unprotect them, or delete them in one go. A delete can be undone for a few seconds afterwards.
 
-The options list is laid out by group, like the popup. A group's heading selects all of its accounts, renames the group, or picks one color for all of them, which new accounts in the group then take; dropping a row on another group moves the account into it.
+The options list is laid out by group, like the popup. A group's heading selects all of its accounts, renames the group, ungroups it, or picks one color for all of them. An account without a color of its own takes that color when it joins the group and gives it back when it leaves; dropping a row on another group moves the account into it, and **Remove from group** in the selection bar takes the selected accounts out.
 
 <br/>
 

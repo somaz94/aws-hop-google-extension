@@ -1,6 +1,7 @@
 import { describe, test, expect } from '@jest/globals';
 import {
-  bulkEdit, dropMove, groupColor, groupIds, keepSelected, moveBy, moveNextTo, restoredOrder, selectionState, selectRange, suggestionsFor,
+  bulkEdit, dropMove, groupColor, groupIds, keepSelected, moveBy, moveNextTo, regroupedColor, restoredOrder, selectionState, selectRange,
+  suggestionsFor, ungroup,
 } from '../src/lib/listEdit.js';
 import { normalizeProfile } from '../src/lib/profile.js';
 
@@ -160,5 +161,39 @@ describe('groups', () => {
     expect(across.order).toEqual(['a', 'c', 'b', 'd']);
     expect([across.regrouped.id, across.regrouped.group]).toEqual(['d', 'data']);
     expect(dropMove(profiles, shown, 'x', 'a', false).regrouped).toBeNull();
+  });
+});
+
+describe('group colors when accounts move', () => {
+  const GREEN = '#22aa22';
+  const members = [
+    profile('a', { group: 'lucky', color: GREEN }), profile('b', { group: 'lucky', color: GREEN }),
+    profile('c'), profile('d', { color: '#123456' }), profile('e', { group: 'other' }),
+  ];
+
+  test('an account with an automatic color takes the color of the group it joins', () => {
+    expect(regroupedColor(members.filter((p) => p.id !== 'c'), members[2], 'lucky')).toBe(GREEN);
+    expect(bulkEdit(members, ['c'], { group: 'lucky' })[0].color).toBe(GREEN);
+    expect(dropMove(members, ['a', 'b', 'c', 'd', 'e'], 'c', 'b', true).regrouped.color).toBe(GREEN);
+  });
+
+  test('a color the account was given itself stays', () => {
+    expect(bulkEdit(members, ['d'], { group: 'lucky' })[0].color).toBe('#123456');
+  });
+
+  test('leaving a group gives back the color it only had from that group', () => {
+    expect(bulkEdit(members, ['b'], { group: '' })[0]).toMatchObject({ group: '', color: null });
+    expect(bulkEdit(members, ['b'], { group: 'other' })[0]).toMatchObject({ group: 'other', color: null });
+  });
+
+  test('renaming a whole group or setting the same group again keeps the colors', () => {
+    expect(bulkEdit(members, ['a', 'b'], { group: 'lucky2' }).map((p) => [p.group, p.color])).toEqual([['lucky2', GREEN], ['lucky2', GREEN]]);
+    expect(bulkEdit(members, ['a', 'b'], { group: 'lucky' })).toEqual([]);
+  });
+
+  test('ungroup takes every member out, dropping the shared color but not a different one', () => {
+    const mixed = [...members, profile('f', { group: 'lucky', color: '#654321' })];
+    expect(ungroup(members, 'lucky').map((p) => [p.id, p.group, p.color])).toEqual([['a', '', null], ['b', '', null]]);
+    expect(ungroup(mixed, 'lucky').map((p) => p.color)).toEqual([GREEN, GREEN, '#654321']);
   });
 });

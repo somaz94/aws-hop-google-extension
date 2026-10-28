@@ -50,9 +50,14 @@ export function selectionState(selected, ids) {
 export function bulkEdit(profiles, ids, changes) {
   const patch = Object.fromEntries(BULK_FIELDS.filter((key) => Object.hasOwn(changes, key)).map((key) => [key, changes[key]]));
   const chosen = new Set(ids);
+  const staying = profiles.filter((profile) => !chosen.has(profile.id));
+  const group = Object.hasOwn(patch, 'group') && !Object.hasOwn(patch, 'color') ? String(patch.group ?? '').trim() : null;
   return profiles
     .filter((profile) => chosen.has(profile.id))
-    .map((profile) => [profile, normalizeProfile({ ...profile, ...patch })])
+    .map((profile) => {
+      const color = group !== null && group !== profile.group ? regroupedColor(staying, profile, group) : profile.color;
+      return [profile, normalizeProfile({ ...profile, color, ...patch })];
+    })
     .filter(([before, after]) => BULK_FIELDS.some((key) => before[key] !== after[key]))
     .map(([, after]) => after);
 }
@@ -83,11 +88,32 @@ export function groupColor(profiles, group) {
   return colors.size === 1 ? [...colors][0] : null;
 }
 
+/**
+ * The color a profile keeps when it moves into `group`, judged against the `others` that stay put: a color it only
+ * had from its old group's shared color gives way to the new group's, and a color it was given itself stays.
+ */
+export function regroupedColor(others, profile, group) {
+  const inherited = profile.color !== null && profile.color === groupColor(others, profile.group);
+  const own = inherited ? null : profile.color;
+  return own ?? groupColor(others, String(group ?? '').trim());
+}
+
 /** Where a dragged row lands: the new order, and its profile moved into the target row's group when that differs. */
 export function dropMove(profiles, ids, id, targetId, after) {
   const byId = new Map(profiles.map((profile) => [profile.id, profile]));
   const source = byId.get(id);
   const target = byId.get(targetId);
-  const regrouped = source && target && source.group !== target.group ? normalizeProfile({ ...source, group: target.group }) : null;
+  const others = profiles.filter((profile) => profile.id !== id);
+  const regrouped = source && target && source.group !== target.group
+    ? normalizeProfile({ ...source, group: target.group, color: regroupedColor(others, source, target.group) })
+    : null;
   return { order: moveNextTo(ids, id, targetId, after), regrouped };
+}
+
+/** Every account in `group` taken out of it; a color they only had from the group goes back to automatic. */
+export function ungroup(profiles, group) {
+  const shared = groupColor(profiles, group);
+  return profiles
+    .filter((profile) => profile.group === group)
+    .map((profile) => normalizeProfile({ ...profile, group: '', color: profile.color === shared ? null : profile.color }));
 }

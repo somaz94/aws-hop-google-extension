@@ -1,6 +1,6 @@
 import { t } from '../i18n/index.js';
 import {
-  bulkEdit, dropMove, groupColor, groupIds, keepSelected, moveBy, selectionState, selectRange, suggestionsFor,
+  bulkEdit, dropMove, groupColor, groupIds, keepSelected, moveBy, selectionState, selectRange, suggestionsFor, ungroup,
 } from '../lib/listEdit.js';
 import { GROUP_MAX, normalizeProfile, profileColor, profileMeta, validateProfile } from '../lib/profile.js';
 import { filterProfiles, groupProfiles } from '../lib/search.js';
@@ -97,7 +97,12 @@ export function createAccountList({ store, profiles, reload, onEdit, undo }) {
       color.value = groupColor(all, group) ?? profileColor(members[0]);
       color.dataset.action = 'group-color';
       color.setAttribute('aria-label', t('options.group.colorOf', { name }));
-      head.append(color, toolButton(t('options.group.rename'), 'rename-group', { aria: t('options.group.renameOf', { name }) }));
+      const actions = element('span', 'group-actions');
+      actions.append(
+        toolButton(t('options.group.rename'), 'rename-group', { aria: t('options.group.renameOf', { name }) }),
+        toolButton(t('options.group.ungroup'), 'ungroup', { aria: t('options.group.ungroupOf', { name }) }),
+      );
+      head.append(color, actions);
     }
     return head;
   }
@@ -226,6 +231,7 @@ export function createAccountList({ store, profiles, reload, onEdit, undo }) {
     const button = event.target.closest('button[data-action]');
     if (!button) return undefined;
     if (button.dataset.action === 'rename-group') return startRename(button.closest('.group-head'));
+    if (button.dataset.action === 'ungroup') return saveChanged(ungroup(profiles(), button.closest('.group-head').dataset.group));
     const id = button.closest('.profile').dataset.id;
     const profile = profiles().find((other) => other.id === id);
     switch (button.dataset.action) {

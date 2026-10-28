@@ -545,6 +545,19 @@ async function run(cdp) {
     return theme[0] === systemTheme ? theme : null;
   }, 'the system theme').catch(() => options.eval(pageTheme)), [systemTheme, systemTheme === 'dark' ? DARK_BG : 'rgb(242, 243, 243)']);
 
+  const applied = await options.eval(`(async () => {
+    const { settings } = await chrome.storage.sync.get('settings');
+    const box = document.getElementById('import-result');
+    box.hidden = true;
+    document.getElementById('import-text').value = JSON.stringify({ format: 'aws-hop', version: 1, profiles: [], settings: { ...settings, theme: 'dark' } });
+    document.getElementById('import-merge').click();
+    for (let i = 0; i < 50 && box.hidden; i += 1) await new Promise((r) => setTimeout(r, 100));
+    document.getElementById('import-text').value = '';
+    return [box.firstChild.textContent, (await chrome.storage.sync.get('settings')).settings.theme];
+  })()`);
+  check('a JSON import can bring the settings saved in it', applied, ['Added 0, updated 0, 0 already in the list. Settings applied.', 'dark']);
+  await choose(options, 'setting-theme', 'auto');
+
   console.log('Account list');
   const rowNames = () => options.eval(`[...document.querySelectorAll('.profile .name')].map((n) => n.textContent)`);
   const storedRows = () => options.eval(`chrome.storage.sync.get(null).then((items) => items.profileOrder.map((id) => items['profile:' + id]).map((p) => [p.name, p.group, p.guarded]))`);

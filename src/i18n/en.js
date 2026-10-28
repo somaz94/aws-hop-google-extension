@@ -60,6 +60,8 @@ export default Object.freeze({
   'import.preview.added': 'new',
   'import.preview.updated': 'updates your account',
   'import.preview.exists': 'already in your list as {name}; merging skips it',
+  'import.preview.settings': 'Also apply the settings saved in this file',
+  'import.result.settings': 'Settings applied.',
   'import.preview.dropped': 'Replacing all accounts also removes: {names}',
 
   'guard.unregistered': 'Account not in your list',

@@ -59,6 +59,8 @@ export default Object.freeze({
   'import.preview.added': '새로 추가',
   'import.preview.updated': '기존 계정 갱신',
   'import.preview.exists': '이미 {name}(으)로 있어 합치기에서는 건너뜁니다',
+  'import.preview.settings': '이 파일에 저장된 설정도 적용하기',
+  'import.result.settings': '설정도 적용했습니다.',
   'import.preview.dropped': '전체 바꾸기를 하면 지워지는 계정: {names}',
 
   'guard.unregistered': '목록에 없는 계정',

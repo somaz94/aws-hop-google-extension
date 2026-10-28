@@ -14,6 +14,7 @@ import { createAccountList } from './list.js';
 const store = createStore();
 const themer = createThemer(document);
 let profiles = [];
+let settings = null;
 const currentProfiles = () => profiles;
 
 async function reload() {
@@ -25,14 +26,15 @@ async function reload() {
 const editor = createEditor({ store, profiles: currentProfiles, reload });
 const accounts = createAccountList({ store, profiles: currentProfiles, reload, onEdit: editor.open });
 attachBulkBar({ store, reload, selection: accounts });
-const importExport = createImportExport({ store, profiles: currentProfiles, reload });
+const importExport = createImportExport({ store, profiles: currentProfiles, settings: () => settings, reload });
 const cliHelper = createCliHelper();
 
 // Every setting has an input with the id setting-<key>.
 const SETTING_INPUTS = Object.keys(DEFAULT_SETTINGS);
 const settingInput = (key) => $(`setting-${key}`);
 
-function applySettings(settings) {
+function applySettings(next) {
+  settings = next;
   themer.apply(settings.theme);
   applyLanguageSetting(settings, chrome.i18n.getUILanguage());
   applyTranslations(document);
@@ -43,13 +45,13 @@ function applySettings(settings) {
 }
 
 async function loadSettings() {
-  const settings = await store.loadSettings();
+  const loaded = await store.loadSettings();
   for (const key of SETTING_INPUTS) {
     const input = settingInput(key);
-    if (input.type === 'checkbox') input.checked = settings[key];
-    else input.value = settings[key];
+    if (input.type === 'checkbox') input.checked = loaded[key];
+    else input.value = loaded[key];
   }
-  applySettings(settings);
+  applySettings(loaded);
 }
 
 const saveSettingInOrder = serial((key, value) => saveSetting(store, key, value, { recent: createRecentStore() }));
@@ -61,9 +63,9 @@ for (const key of SETTING_INPUTS) {
   });
 }
 
-store.onChange(({ profiles: profilesChanged, settings }) => {
-  if (profilesChanged) reload();
-  if (settings) loadSettings();
+store.onChange((changed) => {
+  if (changed.profiles) reload();
+  if (changed.settings) loadSettings();
 });
 
 async function init() {

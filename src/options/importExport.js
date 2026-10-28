@@ -15,7 +15,7 @@ function previewStatus({ status, as }) {
 }
 
 /** The import box with its preview, the merge and replace buttons, and the export button. */
-export function createImportExport({ store, profiles, reload }) {
+export function createImportExport({ store, profiles, settings, reload }) {
   // The parsed import and the rows cleared in its preview, so both buttons import exactly what the preview shows.
   let draft = null;
   let previewTimer = null;
@@ -31,7 +31,7 @@ export function createImportExport({ store, profiles, reload }) {
   /** The parsed import for the current text; parsed again only when the text changed. Throws on a malformed file. */
   function currentImport() {
     const text = $('import-text').value;
-    if (draft?.text !== text) draft = { text, result: importProfiles(text), excluded: new Set() };
+    if (draft?.text !== text) draft = { text, result: importProfiles(text), excluded: new Set(), applySettings: true };
     return draft;
   }
 
@@ -70,6 +70,18 @@ export function createImportExport({ store, profiles, reload }) {
       rows.lastChild.append(label);
     });
     box.append(rows);
+    if (current.result.settings) {
+      const checkbox = element('input');
+      checkbox.type = 'checkbox';
+      checkbox.id = 'import-settings';
+      checkbox.checked = current.applySettings;
+      checkbox.addEventListener('change', () => {
+        current.applySettings = checkbox.checked;
+      });
+      const label = element('label', 'check');
+      label.append(checkbox, element('span', '', t('import.preview.settings')));
+      box.append(label);
+    }
     const dropped = droppedByReplace(profiles(), picked);
     if (dropped.length) box.append(element('div', 'muted', t('import.preview.dropped', { names: dropped.map((profile) => profile.name).join(', ') })));
     if (skipped.length) box.append(...skippedList(skipped));
@@ -89,22 +101,23 @@ export function createImportExport({ store, profiles, reload }) {
         showResult(t('import.result.nothingSelected'), [], true);
         return null;
       }
-      return { profiles: picked, skipped: current.result.skipped };
+      return { profiles: picked, skipped: current.result.skipped, settings: current.applySettings ? current.result.settings : null };
     } catch (error) {
       showResult(error.message, [], true);
       return null;
     }
   }
 
-  async function applyImport(next, message, skipped) {
+  async function applyImport(next, message, { skipped, settings }) {
     try {
       await store.replaceAll(next);
+      if (settings) await store.saveSettings(settings);
     } catch (error) {
       showResult(t('editor.saveFailed', { detail: error.message }), skipped, true);
       return;
     }
     await reload();
-    showResult(message, skipped);
+    showResult(settings ? `${message} ${t('import.result.settings')}` : message, skipped);
   }
 
   $('import-merge').addEventListener('click', async () => {
@@ -112,14 +125,14 @@ export function createImportExport({ store, profiles, reload }) {
     if (!result) return;
     const merged = mergeProfiles(profiles(), result.profiles);
     const message = t('import.result.merged', { added: merged.added, updated: merged.updated, existing: merged.existing.length });
-    await applyImport(merged.profiles, message, [...result.skipped, ...merged.existing]);
+    await applyImport(merged.profiles, message, { skipped: [...result.skipped, ...merged.existing], settings: result.settings });
   });
 
   $('import-replace').addEventListener('click', async () => {
     const result = selectedImport();
     if (!result) return;
     if (!confirm(t('import.confirmReplace', { current: profiles().length, incoming: result.profiles.length }))) return;
-    await applyImport(result.profiles, t('import.result.replaced', { count: result.profiles.length }), result.skipped);
+    await applyImport(result.profiles, t('import.result.replaced', { count: result.profiles.length }), result);
   });
 
   $('import-file').addEventListener('change', async (event) => {
@@ -137,7 +150,7 @@ export function createImportExport({ store, profiles, reload }) {
   });
 
   $('export').addEventListener('click', () => {
-    const blob = new Blob([exportProfiles(profiles())], { type: 'application/json' });
+    const blob = new Blob([exportProfiles(profiles(), { settings: settings() })], { type: 'application/json' });
     const link = element('a');
     link.href = URL.createObjectURL(blob);
     link.download = 'aws-hop-accounts.json';

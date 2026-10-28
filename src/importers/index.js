@@ -65,9 +65,10 @@ export function importProfiles(text, { format = detectFormat(text), idFactory } 
     if (errors.length) skipped.push({ name: profile.name || t('import.unnamed'), reason: errors.map((e) => e.message).join('; ') });
     else valid.push(profile);
   }
-  if (!parser.dedupe) return { profiles: valid, skipped };
+  const settings = parsed.settings ?? null;
+  if (!parser.dedupe) return { profiles: valid, skipped, settings };
   const deduped = dedupeProfiles(valid);
-  return { profiles: deduped.profiles, skipped: [...skipped, ...deduped.skipped] };
+  return { profiles: deduped.profiles, skipped: [...skipped, ...deduped.skipped], settings };
 }
 
 const naturalKey = (profile) => `${profile.provider}\u0000${profile.name.toLowerCase()}`;

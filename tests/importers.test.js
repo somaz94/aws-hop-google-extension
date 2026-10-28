@@ -3,6 +3,7 @@ import { parseIni, profilesFromAwsConfig } from '../src/importers/awsConfig.js';
 import { EXPORT_FORMAT, EXPORT_VERSION, exportProfiles, profilesFromJson } from '../src/importers/json.js';
 import { dedupeProfiles, detectFormat, droppedByReplace, importProfiles, mergeProfiles, selectImported } from '../src/importers/index.js';
 import { setLanguage } from '../src/i18n/index.js';
+import { DEFAULT_SETTINGS } from '../src/lib/store.js';
 import { normalizeProfile } from '../src/lib/profile.js';
 
 afterEach(() => setLanguage('en'));
@@ -119,7 +120,7 @@ describe('JSON', () => {
   const profiles = [{ id: 'a', name: 'shop', provider: 'iam-user', fields: { account: '111122223333' } }];
 
   test('export writes a versioned envelope', () => {
-    const text = exportProfiles(profiles, new Date('2026-01-02T03:04:05Z'));
+    const text = exportProfiles(profiles, { now: new Date('2026-01-02T03:04:05Z') });
     expect(JSON.parse(text)).toEqual({ format: EXPORT_FORMAT, version: EXPORT_VERSION, exportedAt: '2026-01-02T03:04:05.000Z', profiles });
     expect(text.endsWith('\n')).toBe(true);
     expect(exportProfiles([])).toContain('"profiles": []');
@@ -127,7 +128,17 @@ describe('JSON', () => {
 
   test('import accepts the envelope and a bare array', () => {
     expect(profilesFromJson(exportProfiles(profiles)).profiles).toEqual(profiles);
-    expect(profilesFromJson(JSON.stringify(profiles))).toEqual({ profiles, skipped: [] });
+    expect(profilesFromJson(JSON.stringify(profiles))).toEqual({ profiles, skipped: [], settings: null });
+  });
+
+  test('settings travel with the export, normalized on the way back in', () => {
+    const text = exportProfiles(profiles, { settings: { ...DEFAULT_SETTINGS, theme: 'dark' } });
+    expect(profilesFromJson(text).settings).toEqual({ ...DEFAULT_SETTINGS, theme: 'dark' });
+    const odd = JSON.stringify({ format: EXPORT_FORMAT, version: EXPORT_VERSION, profiles, settings: { theme: 'sepia', openIn: 'current-tab' } });
+    expect(profilesFromJson(odd).settings).toEqual({ ...DEFAULT_SETTINGS, openIn: 'current-tab' });
+    expect(profilesFromJson(exportProfiles(profiles)).settings).toBeNull();
+    expect(importProfiles(text).settings).toEqual({ ...DEFAULT_SETTINGS, theme: 'dark' });
+    expect(importProfiles('[profile a]\naws_account_id = 111122223333').settings).toBeNull();
   });
 
   test('import refuses newer formats, junk and bad JSON', () => {

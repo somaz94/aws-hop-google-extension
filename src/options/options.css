@@ -268,9 +268,8 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
 
 .bulk-bar {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 8px;
-  align-items: center;
+  flex-direction: column;
+  gap: 6px;
   margin-bottom: 8px;
   padding: 8px 10px;
   border: 1px solid var(--accent);
@@ -281,9 +280,9 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
 
 .list-tools[hidden], .bulk-bar[hidden] { display: none; }
 .bulk-bar button { padding: 3px 10px; font-size: 12px; }
-.bulk-field { display: flex; gap: 4px; align-items: center; }
-.bulk-field input { width: 110px; padding: 3px 6px; font-size: 12px; }
-.bulk-help { flex-basis: 100%; font-size: 12px; }
+.bulk-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.bulk-row input { width: 200px; padding: 3px 6px; font-size: 12px; }
+.bulk-help { font-size: 12px; }
 
 .hint { margin: 0 0 6px; font-size: 12px; }
 

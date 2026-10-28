@@ -171,7 +171,7 @@ export default Object.freeze({
   'options.bulk.protect': 'Protect',
   'options.bulk.unprotect': 'Unprotect',
   'options.bulk.clear': 'Clear selection',
-  'options.bulk.help': 'Setting an empty tag or group clears it.\nShift-click a box to select every account up to it.',
+  'options.bulk.help': 'Setting an empty tag clears it.\nShift-click a box to select every account up to it.',
   'options.undo': 'Undo',
   'options.group.none': 'No group',
   'options.group.selectOf': 'Select every account in {name}',

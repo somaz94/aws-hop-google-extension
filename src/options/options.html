@@ -26,21 +26,26 @@
         <input id="list-search" type="search" placeholder="Search accounts" data-i18n-placeholder="options.search" aria-label="Search accounts" data-i18n-aria-label="options.search" autocomplete="off" spellcheck="false" aria-controls="profile-list">
       </div>
       <div id="bulk-bar" class="bulk-bar" role="group" aria-label="Edit selected accounts" data-i18n-aria-label="options.bulk.label" hidden>
-        <strong id="bulk-count"></strong>
-        <span class="bulk-field">
+        <div class="bulk-row">
+          <strong id="bulk-count"></strong>
+          <span class="spacer"></span>
+          <button id="bulk-clear" type="button" data-i18n="options.bulk.clear">Clear selection</button>
+        </div>
+        <div class="bulk-row">
           <input id="bulk-tag" autocomplete="off" list="tag-suggestions" placeholder="Tag" data-i18n-placeholder="editor.tag" aria-label="Tag for the selected accounts" data-i18n-aria-label="options.bulk.tagOf">
           <button id="bulk-set-tag" type="button" data-i18n="options.bulk.setTag">Set tag</button>
-        </span>
-        <span class="bulk-field">
+        </div>
+        <div class="bulk-row">
           <input id="bulk-group" autocomplete="off" list="group-suggestions" placeholder="Group" data-i18n-placeholder="editor.group" aria-label="Group for the selected accounts" data-i18n-aria-label="options.bulk.groupOf">
           <button id="bulk-set-group" type="button" data-i18n="options.bulk.setGroup">Set group</button>
           <button id="bulk-ungroup" type="button" data-i18n="options.bulk.ungroup">Remove from group</button>
-        </span>
-        <button id="bulk-protect" type="button" data-i18n="options.bulk.protect">Protect</button>
-        <button id="bulk-unprotect" type="button" data-i18n="options.bulk.unprotect">Unprotect</button>
-        <button id="bulk-delete" class="danger" type="button" data-i18n="options.delete">Delete</button>
-        <span class="spacer"></span>
-        <button id="bulk-clear" type="button" data-i18n="options.bulk.clear">Clear selection</button>
+        </div>
+        <div class="bulk-row">
+          <button id="bulk-protect" type="button" data-i18n="options.bulk.protect">Protect</button>
+          <button id="bulk-unprotect" type="button" data-i18n="options.bulk.unprotect">Unprotect</button>
+          <span class="spacer"></span>
+          <button id="bulk-delete" class="danger" type="button" data-i18n="options.delete">Delete</button>
+        </div>
         <small class="muted bulk-help" data-i18n="options.bulk.help"></small>
       </div>
       <div id="undo-bar" class="result undo-bar" role="status" hidden><span id="undo-text"></span><button id="undo" type="button" data-i18n="options.undo">Undo</button></div>

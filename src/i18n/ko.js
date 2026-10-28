@@ -170,7 +170,7 @@ export default Object.freeze({
   'options.bulk.protect': '보호',
   'options.bulk.unprotect': '보호 해제',
   'options.bulk.clear': '선택 해제',
-  'options.bulk.help': '태그나 그룹을 비운 채 지정하면 지워집니다.\nShift를 누른 채 체크박스를 누르면 그 계정까지 한꺼번에 선택합니다.',
+  'options.bulk.help': '태그를 비운 채 지정하면 태그가 지워집니다.\nShift를 누른 채 체크박스를 누르면 그 계정까지 한꺼번에 선택합니다.',
   'options.undo': '되돌리기',
   'options.group.none': '그룹 없음',
   'options.group.selectOf': '{name} 그룹 계정 모두 선택',

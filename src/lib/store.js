@@ -54,26 +54,36 @@ export function createStore({ area = globalThis.chrome?.storage?.sync, onChanged
     return profilesFromItems(await area.get(null)).map((profile) => normalizeProfile(profile));
   }
 
+  async function readOrder() {
+    const items = await area.get(ORDER_KEY);
+    return Array.isArray(items[ORDER_KEY]) ? items[ORDER_KEY] : [];
+  }
+
   async function writeOrder(ids) {
     await area.set({ [ORDER_KEY]: ids });
+  }
+
+  /** Saves many profiles in one write, so a bulk edit stays under the per-minute write quota. */
+  async function saveProfiles(profiles) {
+    const order = await readOrder();
+    const items = { [ORDER_KEY]: [...order, ...profiles.map((profile) => profile.id).filter((id) => !order.includes(id))] };
+    for (const profile of profiles) items[profileKey(profile.id)] = profile;
+    await area.set(items);
+  }
+
+  async function deleteProfiles(ids) {
+    const order = await readOrder();
+    await area.remove(ids.map(profileKey));
+    await writeOrder(order.filter((other) => !ids.includes(other)));
   }
 
   return {
     loadProfiles,
 
-    async saveProfile(profile) {
-      const items = await area.get(ORDER_KEY);
-      const order = Array.isArray(items[ORDER_KEY]) ? items[ORDER_KEY] : [];
-      const next = order.includes(profile.id) ? order : [...order, profile.id];
-      await area.set({ [profileKey(profile.id)]: profile, [ORDER_KEY]: next });
-    },
-
-    async deleteProfile(id) {
-      const items = await area.get(ORDER_KEY);
-      const order = Array.isArray(items[ORDER_KEY]) ? items[ORDER_KEY] : [];
-      await area.remove(profileKey(id));
-      await writeOrder(order.filter((other) => other !== id));
-    },
+    saveProfile: (profile) => saveProfiles([profile]),
+    saveProfiles,
+    deleteProfile: (id) => deleteProfiles([id]),
+    deleteProfiles,
 
     async reorder(ids) {
       await writeOrder(ids);

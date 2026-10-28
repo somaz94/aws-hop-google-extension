@@ -30,7 +30,7 @@ Plain ES modules, loaded straight from `src/` with no bundler. Each directory ha
 | Directory | Role |
 |---|---|
 | `src/providers/` | One module per sign-in method, plus the registry in `index.js` |
-| `src/lib/` | The account model, tags and colors, storage, console account detection, matching, search and remembered console sessions. No UI and no Chrome API other than storage |
+| `src/lib/` | The account model, tags and colors, storage, console account detection, matching, search, list editing (reorder, selection, bulk edit) and remembered console sessions. No UI and no Chrome API other than storage |
 | `src/importers/` | Parsers that turn `~/.aws/config`, an aws-extend-switch-roles configuration or JSON into accounts, de-duplication and merging, and the account ID command for each terminal (one `CLI_SHELLS` entry per terminal) |
 | `src/i18n/` | One message catalog per language, the lookup function and the DOM helper that fills `data-i18n` attributes |
 | `_locales/` | Chrome's own catalogs, for the few manifest strings Chrome shows itself |

@@ -1,8 +1,10 @@
 import { applyTranslations, richText } from '../i18n/dom.js';
 import { resolveLanguage, setLanguage, t } from '../i18n/index.js';
 import { formatAccountId } from '../lib/account.js';
+import { bulkEdit, keepSelected, moveBy, moveNextTo, selectionState, selectRange } from '../lib/listEdit.js';
 import { buildProfileUrl, normalizeProfile, profileAccount, profileColor, validateProfile } from '../lib/profile.js';
 import { createRecentStore } from '../lib/recent.js';
+import { filterProfiles } from '../lib/search.js';
 import { createStore } from '../lib/store.js';
 import { SUGGESTED_TAGS } from '../lib/tag.js';
 import { accountIdCommand, CLI_SHELLS, getShell, shellForPlatform } from '../importers/accountIdCommand.js';
@@ -38,6 +40,18 @@ function option(value, label) {
 
 /* ---------- account list ---------- */
 
+const list = $('profile-list');
+let query = '';
+// The rows on screen, in screen order; the selection never holds an id outside them.
+let shown = [];
+let selected = new Set();
+let selectionAnchor = null;
+let dragId = null;
+
+const searching = () => Boolean(query.trim());
+const shownIds = () => shown.map((profile) => profile.id);
+const allIds = () => profiles.map((profile) => profile.id);
+
 function metaLine(profile) {
   const account = profileAccount(profile);
   const provider = getProvider(profile.provider);
@@ -72,34 +86,67 @@ function inlineControls(profile) {
   return [tag, guardLabel];
 }
 
-function renderList() {
-  const list = $('profile-list');
-  list.replaceChildren();
-  profiles.forEach((profile, index) => {
-    const row = element('li', profile.guarded ? 'profile guarded' : 'profile');
-    row.dataset.id = profile.id;
-    const dot = element('span', 'dot');
-    dot.style.background = profileColor(profile);
-    const main = element('div', 'main');
-    main.append(element('div', 'name', profile.name), element('div', 'meta', metaLine(profile)));
-    const tools = element('div', 'tools');
-    tools.append(
-      toolButton('↑', 'up', { disabled: index === 0, aria: t('options.moveUp') }),
-      toolButton('↓', 'down', { disabled: index === profiles.length - 1, aria: t('options.moveDown') }),
-      toolButton(t('options.edit'), 'edit'),
-      toolButton(t('options.duplicate'), 'duplicate'),
-      toolButton(t('options.delete'), 'delete'),
-    );
-    row.append(dot, main, ...inlineControls(profile), tools);
-    list.append(row);
-  });
-  $('no-profiles').hidden = profiles.length > 0;
-  renderTagSuggestions();
+function profileRow(profile, index, reorderable) {
+  const row = element('li', profile.guarded ? 'profile guarded' : 'profile');
+  row.dataset.id = profile.id;
+  const pick = element('input', 'pick');
+  pick.type = 'checkbox';
+  pick.dataset.action = 'select';
+  pick.setAttribute('aria-label', t('options.selectOf', { name: profile.name }));
+  // Mouse only: keyboard users reorder with the arrow buttons.
+  const handle = element('span', reorderable ? 'handle' : 'handle off', '⠿');
+  handle.title = t('options.dragHandle');
+  handle.setAttribute('aria-hidden', 'true');
+  const dot = element('span', 'dot');
+  dot.style.background = profileColor(profile);
+  const main = element('div', 'main');
+  main.append(element('div', 'name', profile.name), element('div', 'meta', metaLine(profile)));
+  const tools = element('div', 'tools');
+  tools.append(
+    toolButton('↑', 'up', { disabled: !reorderable || index === 0, aria: t('options.moveUp') }),
+    toolButton('↓', 'down', { disabled: !reorderable || index === shown.length - 1, aria: t('options.moveDown') }),
+    toolButton(t('options.edit'), 'edit'),
+    toolButton(t('options.duplicate'), 'duplicate'),
+    toolButton(t('options.delete'), 'delete'),
+  );
+  row.append(pick, handle, dot, main, ...inlineControls(profile), tools);
+  return row;
 }
 
-function renderTagSuggestions() {
+// Search results are ranked rather than in the stored order, so moving a row there would land somewhere unexpected.
+function renderList() {
+  shown = filterProfiles(profiles, query);
+  selected = keepSelected(selected, shownIds());
+  const reorderable = !searching();
+  list.replaceChildren(...shown.map((profile, index) => profileRow(profile, index, reorderable)));
+  $('list-tools').hidden = profiles.length === 0;
+  $('no-profiles').hidden = profiles.length > 0;
+  $('no-match').hidden = profiles.length === 0 || shown.length > 0;
+  $('reorder-hint').hidden = reorderable || shown.length < 2;
+  renderSelection();
+  renderSuggestions();
+}
+
+function renderSelection() {
+  const state = selectionState(selected, shownIds());
+  const all = $('select-all');
+  all.checked = state === 'all';
+  all.indeterminate = state === 'some';
+  all.disabled = shown.length === 0;
+  for (const row of list.children) {
+    const on = selected.has(row.dataset.id);
+    row.classList.toggle('selected', on);
+    row.querySelector('[data-action="select"]').checked = on;
+  }
+  $('bulk-bar').hidden = selected.size === 0;
+  $('bulk-count').textContent = t('options.bulk.count', { count: selected.size });
+}
+
+function renderSuggestions() {
   const tags = new Set([...profiles.map((profile) => profile.tag).filter(Boolean), ...SUGGESTED_TAGS]);
   $('tag-suggestions').replaceChildren(...[...tags].map((tag) => option(tag, '')));
+  const groups = new Set(profiles.map((profile) => profile.group).filter(Boolean));
+  $('group-suggestions').replaceChildren(...[...groups].map((group) => option(group, '')));
 }
 
 async function reload() {
@@ -108,10 +155,7 @@ async function reload() {
   renderImportPreview();
 }
 
-async function move(index, delta) {
-  const ids = profiles.map((profile) => profile.id);
-  const [id] = ids.splice(index, 1);
-  ids.splice(index + delta, 0, id);
+async function reorder(ids) {
   await store.reorder(ids);
   await reload();
 }
@@ -123,17 +167,23 @@ async function updateInline(profile, changes) {
   return reload();
 }
 
-const list = $('profile-list');
+function toggleSelected(box, range) {
+  const id = box.closest('.profile').dataset.id;
+  selected = selectRange(selected, shownIds(), range ? selectionAnchor : id, id, box.checked);
+  selectionAnchor = id;
+  renderSelection();
+}
 
 list.addEventListener('click', async (event) => {
+  // A click event, not change, because only the click carries the Shift key.
+  if (event.target.dataset.action === 'select') return toggleSelected(event.target, event.shiftKey);
   const button = event.target.closest('button[data-action]');
-  if (!button) return;
+  if (!button) return undefined;
   const id = button.closest('.profile').dataset.id;
-  const index = profiles.findIndex((profile) => profile.id === id);
-  const profile = profiles[index];
+  const profile = profiles.find((other) => other.id === id);
   switch (button.dataset.action) {
-    case 'up': return move(index, -1);
-    case 'down': return move(index, 1);
+    case 'up': return reorder(moveBy(allIds(), id, -1));
+    case 'down': return reorder(moveBy(allIds(), id, 1));
     case 'edit': return openEditor(profile);
     case 'duplicate': return openEditor({ ...profile, id: null, name: t('options.copyName', { name: profile.name }) });
     case 'delete':
@@ -156,6 +206,124 @@ list.addEventListener('change', (event) => {
 
 list.addEventListener('keydown', (event) => {
   if (event.key === 'Enter' && event.target.dataset.action === 'tag') event.target.blur();
+});
+
+$('list-search').addEventListener('input', (event) => {
+  query = event.target.value;
+  renderList();
+});
+
+$('select-all').addEventListener('change', (event) => {
+  selected = event.target.checked ? new Set(shownIds()) : new Set();
+  selectionAnchor = null;
+  renderSelection();
+});
+
+/* ---------- drag to reorder ---------- */
+
+// Rows become draggable only while the handle is held, so dragging inside the tag input still selects its text.
+list.addEventListener('pointerdown', (event) => {
+  const handle = event.target.closest('.handle');
+  if (handle && !searching()) handle.closest('.profile').draggable = true;
+});
+
+document.addEventListener('pointerup', () => {
+  if (!dragId) for (const row of list.querySelectorAll('[draggable="true"]')) row.draggable = false;
+});
+
+function clearDropMarks() {
+  for (const row of list.querySelectorAll('.drop-before, .drop-after')) row.classList.remove('drop-before', 'drop-after');
+}
+
+function dropTarget(event) {
+  const row = event.target.closest?.('.profile');
+  if (!dragId || !row || row.dataset.id === dragId) return null;
+  const { top, height } = row.getBoundingClientRect();
+  return { id: row.dataset.id, row, after: event.clientY > top + height / 2 };
+}
+
+function endDrag() {
+  dragId = null;
+  clearDropMarks();
+  for (const row of list.querySelectorAll('.dragging, [draggable="true"]')) {
+    row.classList.remove('dragging');
+    row.draggable = false;
+  }
+}
+
+list.addEventListener('dragstart', (event) => {
+  // A text drag out of the tag input starts on the input, not on the row.
+  if (!event.target.matches?.('.profile') || searching()) return;
+  dragId = event.target.dataset.id;
+  event.target.classList.add('dragging');
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+});
+
+list.addEventListener('dragover', (event) => {
+  const target = dropTarget(event);
+  clearDropMarks();
+  if (!target) return;
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+  target.row.classList.add(target.after ? 'drop-after' : 'drop-before');
+});
+
+list.addEventListener('dragleave', (event) => {
+  if (!list.contains(event.relatedTarget)) clearDropMarks();
+});
+
+list.addEventListener('drop', async (event) => {
+  const target = dropTarget(event);
+  const id = dragId;
+  endDrag();
+  if (!target) return;
+  event.preventDefault();
+  await reorder(moveNextTo(allIds(), id, target.id, target.after));
+});
+
+list.addEventListener('dragend', endDrag);
+
+/* ---------- bulk edit ---------- */
+
+const selectedProfiles = () => shown.filter((profile) => selected.has(profile.id));
+
+// One bulk save at a time, each on freshly loaded profiles, so a second quick action cannot write back what the first changed.
+let bulkSaved = Promise.resolve();
+
+function bulkSave(changes) {
+  const ids = [...selected];
+  const save = async () => {
+    const next = bulkEdit(await store.loadProfiles(), ids, changes);
+    if (next.length) await store.saveProfiles(next);
+    await reload();
+  };
+  bulkSaved = bulkSaved.then(save, save);
+  return bulkSaved;
+}
+
+$('bulk-set-tag').addEventListener('click', () => bulkSave({ tag: $('bulk-tag').value }));
+$('bulk-set-group').addEventListener('click', () => bulkSave({ group: $('bulk-group').value }));
+$('bulk-protect').addEventListener('click', () => bulkSave({ guarded: true }));
+$('bulk-unprotect').addEventListener('click', () => bulkSave({ guarded: false }));
+
+for (const [input, button] of [['bulk-tag', 'bulk-set-tag'], ['bulk-group', 'bulk-set-group']]) {
+  $(input).addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') $(button).click();
+  });
+}
+
+$('bulk-delete').addEventListener('click', async () => {
+  const doomed = selectedProfiles();
+  const names = doomed.map((profile) => profile.name).join(', ');
+  if (!doomed.length || !confirm(t('options.bulk.confirmDelete', { count: doomed.length, names }))) return;
+  await store.deleteProfiles(doomed.map((profile) => profile.id));
+  await reload();
+});
+
+$('bulk-clear').addEventListener('click', () => {
+  selected = new Set();
+  selectionAnchor = null;
+  renderSelection();
 });
 
 /* ---------- editor ---------- */

@@ -20,9 +20,33 @@
         <h2 data-i18n="options.accounts">Accounts</h2>
         <button id="add" class="primary" type="button" data-i18n="options.add">Add account</button>
       </div>
+      <div id="list-tools" class="list-tools" hidden>
+        <input id="select-all" type="checkbox" aria-label="Select every listed account" data-i18n-aria-label="options.selectAll">
+        <input id="list-search" type="search" placeholder="Search accounts" data-i18n-placeholder="options.search" aria-label="Search accounts" data-i18n-aria-label="options.search" autocomplete="off" spellcheck="false" aria-controls="profile-list">
+      </div>
+      <div id="bulk-bar" class="bulk-bar" role="group" aria-label="Edit selected accounts" data-i18n-aria-label="options.bulk.label" hidden>
+        <strong id="bulk-count"></strong>
+        <span class="bulk-field">
+          <input id="bulk-tag" maxlength="20" autocomplete="off" list="tag-suggestions" placeholder="Tag" data-i18n-placeholder="editor.tag" aria-label="Tag for the selected accounts" data-i18n-aria-label="options.bulk.tagOf">
+          <button id="bulk-set-tag" type="button" data-i18n="options.bulk.setTag">Set tag</button>
+        </span>
+        <span class="bulk-field">
+          <input id="bulk-group" maxlength="40" autocomplete="off" list="group-suggestions" placeholder="Group" data-i18n-placeholder="editor.group" aria-label="Group for the selected accounts" data-i18n-aria-label="options.bulk.groupOf">
+          <button id="bulk-set-group" type="button" data-i18n="options.bulk.setGroup">Set group</button>
+        </span>
+        <button id="bulk-protect" type="button" data-i18n="options.bulk.protect">Protect</button>
+        <button id="bulk-unprotect" type="button" data-i18n="options.bulk.unprotect">Unprotect</button>
+        <button id="bulk-delete" class="danger" type="button" data-i18n="options.delete">Delete</button>
+        <span class="spacer"></span>
+        <button id="bulk-clear" type="button" data-i18n="options.bulk.clear">Clear selection</button>
+        <small class="muted bulk-help" data-i18n="options.bulk.help"></small>
+      </div>
+      <p id="reorder-hint" class="muted hint" data-i18n="options.reorderHint" hidden></p>
       <ul id="profile-list" class="profile-list"></ul>
       <p id="no-profiles" class="muted" data-i18n="options.noAccounts" hidden>No accounts yet.</p>
+      <p id="no-match" class="muted" data-i18n="options.noMatch" hidden></p>
       <datalist id="tag-suggestions"></datalist>
+      <datalist id="group-suggestions"></datalist>
     </section>
 
     <section>
@@ -125,7 +149,7 @@
         </label>
         <label class="field">
           <span data-i18n="editor.group">Group</span>
-          <input name="group" maxlength="40" autocomplete="off" placeholder="Optional" data-i18n-placeholder="editor.groupPlaceholder">
+          <input name="group" maxlength="40" autocomplete="off" list="group-suggestions" placeholder="Optional" data-i18n-placeholder="editor.groupPlaceholder">
           <small class="muted" data-i18n="editor.groupHelp"></small>
           <small class="error" data-error-for="group"></small>
         </label>

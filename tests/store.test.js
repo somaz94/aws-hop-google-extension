@@ -32,6 +32,27 @@ describe('profiles', () => {
     expect(storage.data.profileOrder).toEqual(['b']);
   });
 
+  test('saveProfiles writes every profile in one call and appends only the new ones', async () => {
+    const { store, storage } = setup();
+    await store.replaceAll([profile('a'), profile('b')]);
+    const writes = jest.spyOn(storage.area, 'set');
+    await store.saveProfiles([profile('b', 'renamed'), profile('c')]);
+    expect(writes).toHaveBeenCalledTimes(1);
+    expect(storage.data.profileOrder).toEqual(['a', 'b', 'c']);
+    expect(storage.data['profile:b'].name).toBe('renamed');
+  });
+
+  test('deleteProfiles removes many items in one call', async () => {
+    const { store, storage } = setup();
+    await store.replaceAll([profile('a'), profile('b'), profile('c')]);
+    const removes = jest.spyOn(storage.area, 'remove');
+    await store.deleteProfiles(['a', 'c']);
+    expect(removes).toHaveBeenCalledTimes(1);
+    expect(storage.data).not.toHaveProperty('profile:a');
+    expect(storage.data).not.toHaveProperty('profile:c');
+    expect(storage.data.profileOrder).toEqual(['b']);
+  });
+
   test('deleteProfile and saveProfile cope with a missing order', async () => {
     const { store, storage } = setup({ 'profile:a': profile('a') });
     await store.deleteProfile('a');

@@ -522,6 +522,89 @@ async function run(cdp) {
   ).catch(() => null), 'cleared');
   check('two settings changed back to back both stick', await options.eval(`chrome.storage.sync.get('settings').then(({ settings }) => [settings.confirmGuarded, settings.showRecent])`), [false, false]);
 
+  console.log('Account list');
+  const rowNames = () => options.eval(`[...document.querySelectorAll('.profile .name')].map((n) => n.textContent)`);
+  const storedRows = () => options.eval(`chrome.storage.sync.get(null).then((items) => items.profileOrder.map((id) => items['profile:' + id]).map((p) => [p.name, p.group, p.guarded]))`);
+  const storedBecome = (expected, what) => waitFor(async () => {
+    const rows = await storedRows();
+    return JSON.stringify(rows) === JSON.stringify(expected) ? rows : null;
+  }, what).catch(() => storedRows());
+  const searchList = (text) => options.eval(`(() => {
+    const box = document.getElementById('list-search');
+    box.value = ${JSON.stringify(text)};
+    box.dispatchEvent(new Event('input', { bubbles: true }));
+  })()`);
+
+  await searchList('shop');
+  check('searching the list filters it and locks the order', await options.eval(`({
+    rows: [...document.querySelectorAll('.profile .name')].map((n) => n.textContent),
+    arrows: [...document.querySelectorAll('.profile [data-action="up"], .profile [data-action="down"]')].every((b) => b.disabled),
+    handles: [...document.querySelectorAll('.profile .handle')].every((h) => h.classList.contains('off')),
+    hint: !document.getElementById('reorder-hint').hidden,
+  })`), { rows: ['shop-prod', 'shop-dev'], arrows: true, handles: true, hint: true });
+  await searchList('no-such-account');
+  check('says so when nothing matches', await options.eval(`[document.querySelectorAll('.profile').length, !document.getElementById('no-match').hidden]`), [0, true]);
+  await searchList('');
+  check('and lists everything again once cleared', [await rowNames(), await options.eval(`document.getElementById('reorder-hint').hidden`)], [['shop-prod', 'shop-dev', 'data-sso'], true]);
+
+  // Synthetic drag events: CDP's own drag input needs real coordinates on a visible page, and this checks the same handlers.
+  const drag = (from, to, after) => options.eval(`(() => {
+    const rows = [...document.querySelectorAll('.profile')];
+    const source = rows[${from}];
+    const target = rows[${to}];
+    const box = target.getBoundingClientRect();
+    const init = { bubbles: true, cancelable: true, dataTransfer: new DataTransfer(), clientY: ${after} ? box.bottom - 2 : box.top + 2 };
+    source.querySelector('.handle').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    source.dispatchEvent(new DragEvent('dragstart', init));
+    target.dispatchEvent(new DragEvent('dragover', init));
+    target.dispatchEvent(new DragEvent('drop', init));
+    source.dispatchEvent(new DragEvent('dragend', init));
+  })()`);
+  await drag(2, 0, false);
+  check('dragging a row by its handle reorders the list', (await storedBecome([['data-sso', '', false], ['shop-prod', '', true], ['shop-dev', '', true]], 'the dragged order')).map(([name]) => name), ['data-sso', 'shop-prod', 'shop-dev']);
+  await drag(0, 2, true);
+  check('and dropping below a row puts it after', (await storedBecome([['shop-prod', '', true], ['shop-dev', '', true], ['data-sso', '', false]], 'the restored order')).map(([name]) => name), ['shop-prod', 'shop-dev', 'data-sso']);
+
+  const picks = `[...document.querySelectorAll('.profile [data-action="select"]')]`;
+  const selectionView = () => options.eval(`[getComputedStyle(document.getElementById('bulk-bar')).display === 'none' ? '' : document.getElementById('bulk-count').textContent,
+    document.getElementById('select-all').checked, document.getElementById('select-all').indeterminate]`);
+  await options.eval(`(() => {
+    const picks = ${picks};
+    picks[0].click();
+    picks[2].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, shiftKey: true }));
+  })()`);
+  check('Shift-click selects every row up to it', await selectionView(), ['3 selected', true, false]);
+  await options.eval(`${picks}[0].click()`);
+  check('and the select-all box shows a partial selection', await selectionView(), ['2 selected', false, true]);
+
+  const bulk = (fields, button) => options.eval(`(() => {
+    for (const [id, value] of Object.entries(${JSON.stringify(fields)})) document.getElementById(id).value = value;
+    document.getElementById(${JSON.stringify(button)}).click();
+  })()`);
+  await bulk({ 'bulk-group': 'team' }, 'bulk-set-group');
+  check('sets the group of every selected account at once', await storedBecome([['shop-prod', '', true], ['shop-dev', 'team', true], ['data-sso', 'team', false]], 'the bulk group'),
+    [['shop-prod', '', true], ['shop-dev', 'team', true], ['data-sso', 'team', false]]);
+  await bulk({}, 'bulk-protect');
+  check('protects them', await storedBecome([['shop-prod', '', true], ['shop-dev', 'team', true], ['data-sso', 'team', true]], 'bulk protect'),
+    [['shop-prod', '', true], ['shop-dev', 'team', true], ['data-sso', 'team', true]]);
+  await bulk({ 'bulk-group': '' }, 'bulk-set-group');
+  await bulk({}, 'bulk-unprotect');
+  check('an empty group clears it, and unprotect lifts the protection', await storedBecome([['shop-prod', '', true], ['shop-dev', '', false], ['data-sso', '', false]], 'bulk clear'),
+    [['shop-prod', '', true], ['shop-dev', '', false], ['data-sso', '', false]]);
+  check('the selection survives the saves', await selectionView(), ['2 selected', false, true]);
+  await options.eval(`document.getElementById('bulk-clear').click()`);
+  check('Clear selection hides the bulk bar', await selectionView(), ['', false, false]);
+
+  await importAccounts(options, '[profile tmp-a]\naws_account_id = 121212121212\n\n[profile tmp-b]\naws_account_id = 131313131313');
+  await options.eval(`document.getElementById('import-text').value = ''`);
+  await searchList('tmp');
+  await options.eval(`document.getElementById('select-all').click()`);
+  check('select-all picks only the rows the search shows', await selectionView(), ['2 selected', true, false]);
+  await options.eval(`window.confirm = () => true; document.getElementById('bulk-delete').click()`);
+  await searchList('');
+  check('deletes the selected accounts at once', (await storedBecome([['shop-prod', '', true], ['shop-dev', '', false], ['data-sso', '', false]], 'the bulk delete')).map(([name]) => name),
+    ['shop-prod', 'shop-dev', 'data-sso']);
+
   console.log('Korean');
   await choose(options, 'setting-language', 'ko');
   check('the options page switches without a reload', await waitFor(() => options.eval(`document.querySelector('[data-i18n="options.accounts"]').textContent === '계정' && document.title`), 'Korean options').catch(() => null), 'AWS Hop 설정');

@@ -113,7 +113,7 @@ textarea { resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, m
   display: flex;
   gap: 10px;
   align-items: center;
-  padding: 8px 0;
+  padding: 8px 0 8px 8px;
   border-top: 1px solid var(--line);
 }
 
@@ -203,7 +203,7 @@ dialog {
 
 dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
 
-.profile.guarded { padding-left: 8px; box-shadow: inset 3px 0 0 #d13212; }
+.profile.guarded { box-shadow: inset 3px 0 0 #d13212; }
 .profile .tag-input { flex: none; width: 96px; padding: 3px 6px; font-size: 12px; }
 
 .inline-check {
@@ -249,3 +249,57 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
 }
 
 .rules li, .steps li { margin: 3px 0; }
+
+.list-tools {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-left: 8px;
+}
+
+.list-tools input[type="search"] {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--card);
+}
+
+.bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--bg);
+  font-size: 13px;
+}
+
+.list-tools[hidden], .bulk-bar[hidden] { display: none; }
+.bulk-bar button { padding: 3px 10px; font-size: 12px; }
+.bulk-field { display: flex; gap: 4px; align-items: center; }
+.bulk-field input { width: 110px; padding: 3px 6px; font-size: 12px; }
+.bulk-help { flex-basis: 100%; font-size: 12px; }
+
+.hint { margin: 0 0 6px; font-size: 12px; }
+
+.profile .pick { flex: none; margin: 0; }
+.profile.selected { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+
+.handle {
+  flex: none;
+  color: var(--muted);
+  cursor: grab;
+  user-select: none;
+}
+
+.handle.off { visibility: hidden; }
+.profile.dragging { opacity: 0.4; }
+.profile.drop-before { box-shadow: inset 0 2px 0 var(--accent); }
+.profile.drop-after { box-shadow: inset 0 -2px 0 var(--accent); }
+.profile.guarded.drop-before { box-shadow: inset 3px 0 0 #d13212, inset 0 2px 0 var(--accent); }
+.profile.guarded.drop-after { box-shadow: inset 3px 0 0 #d13212, inset 0 -2px 0 var(--accent); }

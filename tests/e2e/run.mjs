@@ -278,7 +278,11 @@ async function run(cdp) {
   check(`follows the browser language (${uiLanguage}) by default`, await waitFor(() => options.eval('document.title === ' + JSON.stringify(autoTitle) + ' && document.title'), 'the translated title').catch(() => null), autoTitle);
   await choose(options, 'setting-language', 'en');
   check('switches to English from the settings', await waitFor(() => options.eval(`document.title === 'AWS Hop settings' && document.title`), 'English').catch(() => null), 'AWS Hop settings');
-  check('opens the CLI helper while the list is empty', await options.eval(`document.getElementById('cli-helper').open && document.getElementById('cli-command').textContent.startsWith('for p in $(aws configure list-profiles)')`), true);
+  // Waits for init(): on an English browser the title checks above pass on the page's fallback text alone.
+  check('opens the CLI helper while the list is empty', await waitFor(
+    () => options.eval(`(document.getElementById('cli-helper').open && document.getElementById('cli-command').textContent.startsWith('for p in $(aws configure list-profiles)')) || null`),
+    'the CLI helper',
+  ).catch(() => false), true);
   const platform = await options.eval('chrome.runtime.getPlatformInfo().then((info) => info.os)');
   check(`picks the command for this platform (${platform})`, await options.eval(`document.querySelector('#cli-shells [aria-pressed="true"]').dataset.shell`), { mac: 'macos', win: 'windows' }[platform] ?? 'linux');
   await options.eval(`document.querySelector('#cli-shells [data-shell="windows"]').click()`);

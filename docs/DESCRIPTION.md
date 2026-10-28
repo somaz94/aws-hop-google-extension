@@ -22,6 +22,7 @@ Sign-in methods
 Account guard
 - A colored stripe and label on every AWS console page, showing which account and role the tab is in
 - Protected accounts get a red frame and their name in front of the tab title
+- The toolbar icon shows the tab's tag as a badge, on red for protected accounts
 - Accounts you have not added get a gray label, and the popup offers to add them
 
 Your accounts, your labels

@@ -12,7 +12,7 @@ import { dirname, join } from 'node:path';
 import { clearTimeout, setTimeout } from 'node:timers';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
-import { colorFor } from '../../src/lib/tag.js';
+import { colorFor, PROTECTED_COLOR } from '../../src/lib/tag.js';
 
 const ROOT = realpathSync(join(dirname(fileURLToPath(import.meta.url)), '..', '..'));
 const CACHE = join(process.env.XDG_CACHE_HOME ?? join(homedir(), '.cache'), 'aws-hop-e2e');
@@ -367,6 +367,20 @@ async function run(cdp) {
     '111122223333:nav:matched', '444455556666:dom:matched', '777788889999:host:matched', '999999999999:host:none',
   ]);
 
+  // Without the tabs permission tab URLs are hidden, so this reads every tab's badge and marks a red one with `!`.
+  const badges = () => options.eval(`(async () => {
+    const badges = [];
+    for (const tab of await chrome.tabs.query({})) {
+      const text = await chrome.action.getBadgeText({ tabId: tab.id });
+      const rgb = (await chrome.action.getBadgeBackgroundColor({ tabId: tab.id })).slice(0, 3);
+      const hex = '#' + rgb.map((n) => n.toString(16).padStart(2, '0')).join('');
+      if (text) badges.push(text + (hex === ${JSON.stringify(PROTECTED_COLOR)} ? '!' : ''));
+    }
+    return badges.sort().join(' ');
+  })()`);
+  const badgesBecome = (expected) => waitFor(async () => ((await badges()) === expected ? expected : null), `badges "${expected}"`).catch(() => badges());
+  check('each console tab badges the toolbar icon with its tag, red when protected', await badgesBecome('? prod! shop test'), '? prod! shop test');
+
   await options.eval(`(() => {
     const input = document.querySelector('.profile:nth-child(2) [data-action="tag"]');
     input.value = 'qa';
@@ -381,6 +395,7 @@ async function run(cdp) {
     return state?.frame ? state : null;
   }, 'the frame').catch(() => null);
   check('protecting an account from the list frames its console tab', [guardedNow?.frame, guardedNow?.title], [true, '[shop-dev] Console Home']);
+  check('and turns its badge into the new tag on red', await badgesBecome('? prod! qa! test'), '? prod! qa! test');
 
   await options.eval(`document.getElementById('setting-guardEnabled').click()`);
   const hidden = await waitFor(async () => {
@@ -388,9 +403,11 @@ async function run(cdp) {
     return !guard ? title : null;
   }, 'the guard to disappear').catch((error) => error.message);
   check('turning the guard off removes it and the title prefix in open tabs', hidden, 'Console Home');
+  check('and the toolbar badges', await badgesBecome(''), '');
   await options.eval(`document.getElementById('setting-guardEnabled').click()`);
   const back = await waitFor(() => prod.page.eval(GUARD), 'the guard to come back').catch(() => null);
   check('turning it back on restores it', back?.title, '[shop-prod] Console Home');
+  check('badges included', await badgesBecome('? prod! qa! test'), '? prod! qa! test');
 
   console.log('Add this account');
   const deepLink = await cdp.open(`${base}/options/options.html#add=999999999999`);

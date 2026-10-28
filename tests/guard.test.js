@@ -2,13 +2,14 @@
  * @jest-environment jsdom
  */
 import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
-import { buildView, NAV_ATTR, readNavInfo, startGuard } from '../src/content/guard.js';
+import { buildBadge, buildView, NAV_ATTR, readNavInfo, startGuard } from '../src/content/guard.js';
 import { HOST_TAG } from '../src/content/banner.js';
 import { setLanguage } from '../src/i18n/index.js';
 import { MSG } from '../src/lib/messages.js';
 import { createStore, DEFAULT_SETTINGS } from '../src/lib/store.js';
 import { readableTextColor } from '../src/lib/color.js';
 import { normalizeProfile, profileColor } from '../src/lib/profile.js';
+import { PROTECTED_COLOR } from '../src/lib/tag.js';
 import { createFakeRuntime, createFakeStorage } from './helpers/fakeStorage.js';
 
 const prod = normalizeProfile({ id: 'prod', name: 'shop-prod', provider: 'iam-user', tag: 'prod', guarded: true, fields: { account: '111122223333' } });
@@ -60,6 +61,28 @@ describe('buildView', () => {
   });
 });
 
+describe('buildBadge', () => {
+  const badgeFor = (account, profile, settings = DEFAULT_SETTINGS) => buildBadge(buildView(identity(account), profile, settings), profile);
+
+  test('a protected account shows its tag on red', () => {
+    expect(badgeFor('111122223333', prod)).toEqual({ text: 'prod', color: PROTECTED_COLOR, textColor: readableTextColor(PROTECTED_COLOR) });
+  });
+
+  test('without a tag, the start of the name in the account color', () => {
+    expect(badgeFor('444455556666', dev)).toEqual({ text: 'shop', color: profileColor(dev), textColor: readableTextColor(profileColor(dev)) });
+  });
+
+  test('cuts long tags by character, not by code unit', () => {
+    expect(badgeFor('111122223333', { ...prod, tag: '운영환경계정' }).text).toBe('운영환경');
+  });
+
+  test('a question mark for an account not in the list, nothing when the guard shows nothing', () => {
+    expect(badgeFor('999999999999', null)).toMatchObject({ text: '?', color: '#545b64' });
+    expect(badgeFor('999999999999', null, { ...DEFAULT_SETTINGS, guardShowUnregistered: false })).toBeNull();
+    expect(badgeFor('111122223333', prod, { ...DEFAULT_SETTINGS, guardEnabled: false })).toBeNull();
+  });
+});
+
 describe('readNavInfo', () => {
   afterEach(() => document.documentElement.removeAttribute(NAV_ATTR));
 
@@ -107,6 +130,37 @@ describe('startGuard', () => {
       profileId: 'dev',
     });
     expect(runtime.send({ type: 'something-else' })).toBeUndefined();
+  });
+
+  test('tells the worker the badge whenever the view changes, and clears it on stop', async () => {
+    const badges = () => runtime.sent.filter((message) => message.type === MSG.SET_BADGE).map((message) => message.badge?.text ?? null);
+    document.documentElement.setAttribute(NAV_ATTR, JSON.stringify({ loginDisplayNameAccount: '111122223333' }));
+    guard = await start();
+    guard.update();
+    expect(badges()).toEqual(['prod']);
+
+    await store.saveSettings({ ...DEFAULT_SETTINGS, guardEnabled: false });
+    await wait(0);
+    expect(badges()).toEqual(['prod', null]);
+
+    await store.saveSettings(DEFAULT_SETTINGS);
+    await wait(0);
+    window.dispatchEvent(Object.assign(new window.Event('pageshow'), { persisted: false }));
+    window.dispatchEvent(Object.assign(new window.Event('pageshow'), { persisted: true }));
+    expect(badges()).toEqual(['prod', null, 'prod', 'prod']);
+
+    guard.stop();
+    guard = null;
+    expect(badges()).toEqual(['prod', null, 'prod', 'prod', null]);
+  });
+
+  test('a missing worker or a reloaded extension does not break the guard', async () => {
+    document.documentElement.setAttribute(NAV_ATTR, JSON.stringify({ loginDisplayNameAccount: '111122223333' }));
+    guard = await start({ runtime: { ...runtime, sendMessage: () => Promise.reject(new Error('Receiving end does not exist.')) } });
+    expect(label()).toBe('prod · shop-prod');
+    guard.stop();
+    guard = await start({ runtime: { ...runtime, sendMessage: () => { throw new Error('Extension context invalidated.'); } } });
+    expect(label()).toBe('prod · shop-prod');
   });
 
   test('picks up navigation info that arrives later', async () => {

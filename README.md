@@ -11,7 +11,7 @@ It never stores a password, an access key or a session token. Every sign-in stil
 - **One popup for every account**: type to filter, arrow keys and Enter to open, accounts grouped by project, the ones you opened last at the top
 - **Four sign-in methods**: IAM user sign-in, Switch Role, IAM Identity Center and any custom URL, each a self-contained module, so a new method is one file
 - **Your own labels**: a free-form tag per account (`prod`, `qa`, a project name, whatever fits), a color shared by each project, and a protected flag for accounts where a mistake is costly
-- **Account guard**: a colored stripe and label on every console page, plus a red frame and a tab-title prefix for protected accounts
+- **Account guard**: a colored stripe and label on every console page and a badge on the toolbar icon, plus a red frame and a tab-title prefix for protected accounts
 - **Import** from `~/.aws/config` (one entry per account, however many profiles point at it), an [aws-extend-switch-roles](https://github.com/tilfinltd/aws-extend-switch-roles) configuration or a JSON export; accounts sync across your Chrome browsers
 - **English and Korean**, following the browser language or chosen in the settings
 
@@ -56,6 +56,7 @@ On every `*.console.aws.amazon.com` page, AWS Hop looks up the account you are i
 - a stripe across the top and a label in the lower left, in the account's color (click the label to shrink it to a dot; hover it to see where the account was detected from)
 - for protected accounts, a red frame around the whole page and the account name in front of the tab title, such as `[shop-prod] EC2`
 - for accounts that are not in your list, a gray label (can be turned off). The popup then offers **Add**, which opens the add dialog with the account ID filled in
+- a badge on the toolbar icon while that tab is active: the account's tag, or the start of its name without one, in its color, on red for protected accounts and `?` for accounts not in your list
 
 The account is read from the first source that answers, in this order:
 

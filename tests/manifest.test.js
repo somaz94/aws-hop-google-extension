@@ -62,6 +62,7 @@ describe('manifest', () => {
     const files = [
       manifest.action.default_popup,
       manifest.options_ui.page,
+      manifest.background.service_worker,
       ...Object.values(manifest.icons),
       ...Object.values(manifest.action.default_icon),
       ...manifest.content_scripts.flatMap((script) => script.js),

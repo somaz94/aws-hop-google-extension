@@ -35,6 +35,7 @@ Plain ES modules, loaded straight from `src/` with no bundler. Each directory ha
 | `src/i18n/` | One message catalog per language, the lookup function and the DOM helper that fills `data-i18n` attributes |
 | `_locales/` | Chrome's own catalogs, for the few manifest strings Chrome shows itself |
 | `src/content/` | The account guard on console pages |
+| `src/background/` | The service worker, which puts each console tab's badge on the toolbar icon |
 | `src/popup/`, `src/options/` | The two extension pages; thin glue over `src/lib` |
 
 A stored account has a fixed set of common fields (`name`, `provider`, `tag`, `guarded`, `color`, `group`) and a `fields` object whose keys are defined by its sign-in method. `normalizeProfile` drops keys the method does not declare, so nothing a method does not ask for is ever stored, and it reads the `env` field that older versions stored as a tag. The store normalizes every account it loads, so the pages never see an older shape.
@@ -52,6 +53,8 @@ Content scripts declared in the manifest cannot be ES modules, and the guard nee
 1. `nav-bridge.js` runs in the page's **main** world, reads the console navigation's account info and writes a few string fields to the `data-aws-hop-nav` attribute on `<html>`
 2. `loader.js` runs in the **isolated** world and imports `guard.js` from the extension through `chrome.runtime.getURL`
 3. `guard.js` detects the account (`src/lib/identity.js`), matches it to an account (`src/lib/match.js`) and draws the guard in a shadow root (`banner.js`)
+
+The guard also sends its toolbar badge to the service worker (`MSG.SET_BADGE`) whenever what it shows changes, and an empty one on stop. The worker sets it for the sending tab only and clears it when the tab starts loading a new page; `tabs.onUpdated` reports that status without the `tabs` permission, so the badge adds none.
 
 A content script's `import()` can only load extension files listed in `web_accessible_resources`, so every file `guard.js` imports, directly or through another module, must be listed there. `tests/manifest.test.js` walks the imports and fails if one is missing, and it also checks that the bridge and the guard agree on the attribute name.
 

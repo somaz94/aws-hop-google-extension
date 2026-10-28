@@ -6,6 +6,7 @@ import { matchProfile } from '../lib/match.js';
 import { MSG } from '../lib/messages.js';
 import { profileColor } from '../lib/profile.js';
 import { createStore } from '../lib/store.js';
+import { PROTECTED_COLOR } from '../lib/tag.js';
 import { createTitleKeeper, renderGuard } from './banner.js';
 
 // Written by nav-bridge.js in the page's main world; the two names must match.
@@ -13,6 +14,8 @@ export const NAV_ATTR = 'data-aws-hop-nav';
 export const OBSERVE_MS = 20000;
 const DEBOUNCE_MS = 250;
 const UNREGISTERED_COLOR = '#545b64';
+// About as many characters as the toolbar badge shows.
+const BADGE_MAX = 4;
 
 export function readNavInfo(doc) {
   const raw = doc.documentElement.getAttribute(NAV_ATTR);
@@ -44,6 +47,14 @@ export function buildView(identity, profile, settings) {
   };
 }
 
+/** The toolbar badge for a guard view: the tag, the start of the name without one, `?` for an account not in the list. */
+export function buildBadge(view, profile) {
+  if (!view) return null;
+  const color = view.frame ? PROTECTED_COLOR : view.color;
+  const text = profile ? [...(profile.tag || profile.name)].slice(0, BADGE_MAX).join('') : '?';
+  return { text, color, textColor: readableTextColor(color) };
+}
+
 export async function startGuard({
   doc = globalThis.document,
   hostname = globalThis.location?.hostname,
@@ -57,6 +68,16 @@ export async function startGuard({
   const title = createTitleKeeper(doc);
   let state = { identity: null, profile: null };
   let lastView;
+  let badge = null;
+
+  const sendBadge = () => {
+    // Rejects when the worker is not listening, and throws once the extension was reloaded under this page.
+    try {
+      runtime?.sendMessage?.({ type: MSG.SET_BADGE, badge })?.catch(() => {});
+    } catch {
+      // Nothing left to tell.
+    }
+  };
 
   const update = () => {
     const identity = detectIdentity({ hostname, navInfo: readNavInfo(doc), doc });
@@ -68,6 +89,8 @@ export async function startGuard({
     lastView = key;
     renderGuard(doc, view);
     title.set(view?.titlePrefix ?? null);
+    badge = buildBadge(view, profile);
+    sendBadge();
   };
 
   update();
@@ -99,6 +122,12 @@ export async function startGuard({
   };
   runtime?.onMessage.addListener(onMessage);
 
+  // A page restored from the back/forward cache keeps this guard, but the worker cleared the badge when the tab navigated.
+  const onPageShow = (event) => {
+    if (event.persisted) sendBadge();
+  };
+  doc.defaultView.addEventListener('pageshow', onPageShow);
+
   return {
     update,
     get state() {
@@ -110,6 +139,9 @@ export async function startGuard({
       observer.disconnect();
       unsubscribe();
       runtime?.onMessage.removeListener(onMessage);
+      doc.defaultView.removeEventListener('pageshow', onPageShow);
+      badge = null;
+      sendBadge();
       title.set(null);
       title.stop();
       renderGuard(doc, null);

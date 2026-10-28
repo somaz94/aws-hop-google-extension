@@ -8,6 +8,7 @@ export default {
     '!src/options/**',
     '!src/content/loader.js',
     '!src/content/nav-bridge.js',
+    '!src/background/worker.js',
   ],
   coverageThreshold: {
     global: { statements: 90, branches: 90, functions: 90, lines: 90 },

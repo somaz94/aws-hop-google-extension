@@ -118,13 +118,13 @@ describe('settings', () => {
 
   test('round-trips valid values and drops invalid ones', async () => {
     const { store } = setup();
-    await store.saveSettings({ language: 'ko', openIn: 'current-tab', guardEnabled: false, guardTitlePrefix: 'yes', guardPosition: 'bottom-right', extra: 1 });
-    expect(await store.loadSettings()).toEqual({ ...DEFAULT_SETTINGS, language: 'ko', openIn: 'current-tab', guardEnabled: false, guardPosition: 'bottom-right' });
+    await store.saveSettings({ language: 'ko', openIn: 'current-tab', guardEnabled: false, guardTitlePrefix: 'yes', guardPosition: 'bottom-right', theme: 'dark', extra: 1 });
+    expect(await store.loadSettings()).toEqual({ ...DEFAULT_SETTINGS, language: 'ko', openIn: 'current-tab', guardEnabled: false, guardPosition: 'bottom-right', theme: 'dark' });
   });
 
   test('normalizeSettings ignores junk', () => {
     expect(normalizeSettings(null)).toEqual(DEFAULT_SETTINGS);
-    expect(normalizeSettings({ openIn: 'popup', language: 'fr', guardPosition: 'top-left' })).toEqual(DEFAULT_SETTINGS);
+    expect(normalizeSettings({ openIn: 'popup', language: 'fr', guardPosition: 'top-left', theme: 'sepia' })).toEqual(DEFAULT_SETTINGS);
   });
 });
 

@@ -101,7 +101,7 @@ Once the list is longer than five accounts, the popup starts with the ones you o
 
 From the address bar, type `aws`, a space and part of a name, tag or account ID: Enter opens the first suggestion, or pick another. Alt+Enter always opens a new tab. With the second-Enter setting on, a protected account opens from the address bar only by its full name or by picking it from the suggestions.
 
-The popup opens accounts in a new tab by default. Shift, Ctrl or Cmd with Enter or a click, or a middle click, opens in the other place; the default can be switched in the options. The language setting offers the browser language, English or Korean.
+The popup opens accounts in a new tab by default. Shift, Ctrl or Cmd with Enter or a click, or a middle click, opens in the other place; the default can be switched in the options. The language setting offers the browser language, English or Korean, and the theme setting the system appearance, light or dark.
 
 <br/>
 

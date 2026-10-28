@@ -36,7 +36,7 @@ Your accounts, your labels
 - Import from ~/.aws/config, one entry per account however many profiles point at it, from an aws-extend-switch-roles configuration, or from a JSON export, with a preview where you leave out the accounts you do not want
 - A ready-to-copy command for macOS, Windows (PowerShell) and Linux that looks up the account ID of every AWS CLI profile
 - Accounts sync across your Chrome browsers
-- English and Korean
+- English and Korean, in a light or dark theme or following your system
 
 Privacy
 - Stores only the account names, account IDs, role names, portal URLs and labels you enter, in Chrome sync storage; the recently opened list and open console session addresses stay on the browser

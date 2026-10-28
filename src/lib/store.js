@@ -1,5 +1,6 @@
 import { LANGUAGE_SETTINGS } from '../i18n/index.js';
 import { normalizeProfile } from './profile.js';
+import { THEMES } from './theme.js';
 
 // One storage item per profile: chrome.storage.sync caps a single item at 8 KB, so one array would cap the list.
 const PROFILE_PREFIX = 'profile:';
@@ -15,6 +16,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   showRecent: true,
   confirmGuarded: false,
   guardPosition: 'bottom-left',
+  theme: 'auto',
 });
 
 export const OPEN_IN = Object.freeze(['new-tab', 'current-tab']);
@@ -28,6 +30,7 @@ export function normalizeSettings(raw) {
   if (LANGUAGE_SETTINGS.includes(raw.language)) settings.language = raw.language;
   if (OPEN_IN.includes(raw.openIn)) settings.openIn = raw.openIn;
   if (GUARD_POSITIONS.includes(raw.guardPosition)) settings.guardPosition = raw.guardPosition;
+  if (THEMES.includes(raw.theme)) settings.theme = raw.theme;
   for (const key of ['guardEnabled', 'guardShowUnregistered', 'guardTitlePrefix', 'showRecent', 'confirmGuarded']) {
     if (typeof raw[key] === 'boolean') settings[key] = raw[key];
   }

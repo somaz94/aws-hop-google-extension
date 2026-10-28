@@ -9,6 +9,8 @@ export default {
     '!src/content/loader.js',
     '!src/content/nav-bridge.js',
     '!src/background/worker.js',
+    // A three-line classic script that runs before the page modules; the logic it mirrors is src/lib/theme.js.
+    '!src/theme-early.js',
   ],
   coverageThreshold: {
     global: { statements: 90, branches: 90, functions: 90, lines: 90 },

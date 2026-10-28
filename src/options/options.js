@@ -7,12 +7,14 @@ import { createRecentStore } from '../lib/recent.js';
 import { filterProfiles } from '../lib/search.js';
 import { createStore } from '../lib/store.js';
 import { SUGGESTED_TAGS } from '../lib/tag.js';
+import { createThemer } from '../lib/theme.js';
 import { accountIdCommand, CLI_SHELLS, getShell, shellForPlatform } from '../importers/accountIdCommand.js';
 import { exportProfiles } from '../importers/json.js';
 import { droppedByReplace, importProfiles, mergeProfiles } from '../importers/index.js';
 import { getProvider, listProviders } from '../providers/index.js';
 
 const store = createStore();
+const themer = createThemer(document);
 const $ = (id) => document.getElementById(id);
 
 const editor = $('editor');
@@ -627,9 +629,10 @@ $('export').addEventListener('click', () => {
 
 /* ---------- settings and language ---------- */
 
-const SETTING_INPUTS = ['language', 'openIn', 'showRecent', 'confirmGuarded', 'guardEnabled', 'guardShowUnregistered', 'guardTitlePrefix', 'guardPosition'];
+const SETTING_INPUTS = ['language', 'theme', 'openIn', 'showRecent', 'confirmGuarded', 'guardEnabled', 'guardShowUnregistered', 'guardTitlePrefix', 'guardPosition'];
 
 function applyLanguage(settings) {
+  themer.apply(settings.theme);
   setLanguage(resolveLanguage(settings.language, chrome.i18n.getUILanguage()));
   applyTranslations(document);
   fillProviderSelect();

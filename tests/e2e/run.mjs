@@ -522,6 +522,29 @@ async function run(cdp) {
   ).catch(() => null), 'cleared');
   check('two settings changed back to back both stick', await options.eval(`chrome.storage.sync.get('settings').then(({ settings }) => [settings.confirmGuarded, settings.showRecent])`), [false, false]);
 
+  const DARK_BG = 'rgb(15, 27, 42)';
+  const pageTheme = `[document.documentElement.dataset.theme, getComputedStyle(document.body).backgroundColor]`;
+  await choose(options, 'setting-theme', 'dark');
+  check('the dark theme repaints the options page', await waitFor(async () => {
+    const theme = await options.eval(pageTheme);
+    return theme[0] === 'dark' ? theme : null;
+  }, 'the dark theme').catch(() => options.eval(pageTheme)), ['dark', DARK_BG]);
+  const darkPopup = await cdp.open(`${base}/popup/popup.html`);
+  check('and the popup opens in it', await darkPopup.eval(pageTheme), ['dark', DARK_BG]);
+  await darkPopup.close();
+  await choose(options, 'setting-theme', 'light');
+  check('and the light theme overrides a dark system', await waitFor(async () => {
+    const theme = await options.eval(pageTheme);
+    return theme[0] === 'light' ? theme : null;
+  }, 'the light theme').catch(() => options.eval(pageTheme)), ['light', 'rgb(242, 243, 243)']);
+  await choose(options, 'setting-theme', 'auto');
+  // Headless Chrome reports the host's appearance, which is dark on some laptops and light on CI.
+  const systemTheme = await options.eval(`matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'`);
+  check(`the system setting follows the browser again (${systemTheme} here)`, await waitFor(async () => {
+    const theme = await options.eval(pageTheme);
+    return theme[0] === systemTheme ? theme : null;
+  }, 'the system theme').catch(() => options.eval(pageTheme)), [systemTheme, systemTheme === 'dark' ? DARK_BG : 'rgb(242, 243, 243)']);
+
   console.log('Account list');
   const rowNames = () => options.eval(`[...document.querySelectorAll('.profile .name')].map((n) => n.textContent)`);
   const storedRows = () => options.eval(`chrome.storage.sync.get(null).then((items) => items.profileOrder.map((id) => items['profile:' + id]).map((p) => [p.name, p.group, p.guarded]))`);

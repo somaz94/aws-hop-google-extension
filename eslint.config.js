@@ -20,6 +20,8 @@ const browser = {
   confirm: 'readonly',
   crypto: 'readonly',
   chrome: 'readonly',
+  localStorage: 'readonly',
+  matchMedia: 'readonly',
 };
 
 export default [
@@ -34,7 +36,7 @@ export default [
     },
   },
   {
-    files: ['src/content/loader.js', 'src/content/nav-bridge.js'],
+    files: ['src/content/loader.js', 'src/content/nav-bridge.js', 'src/theme-early.js'],
     languageOptions: { sourceType: 'script' },
   },
   {

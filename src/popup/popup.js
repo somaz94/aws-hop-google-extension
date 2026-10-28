@@ -10,6 +10,7 @@ import { createRecentStore, recentProfiles } from '../lib/recent.js';
 import { createSessionStore, openUrlFor } from '../lib/sessions.js';
 import { moveSelection, needsConfirmation, popupSections, resolveOpenTarget } from '../lib/search.js';
 import { createStore } from '../lib/store.js';
+import { createThemer } from '../lib/theme.js';
 import { getProvider } from '../providers/index.js';
 
 const store = createStore();
@@ -195,6 +196,7 @@ $('add-first').addEventListener('click', () => chrome.runtime.openOptionsPage())
 
 async function init() {
   [profiles, settings, recentIds] = await Promise.all([store.loadProfiles(), store.loadSettings(), recentStore.load()]);
+  createThemer(document).apply(settings.theme);
   setLanguage(resolveLanguage(settings.language, chrome.i18n.getUILanguage()));
   applyTranslations(document);
   render();

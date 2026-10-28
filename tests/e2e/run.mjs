@@ -9,12 +9,15 @@ import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from 'nod
 import { createServer } from 'node:https';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { clearTimeout, setTimeout } from 'node:timers';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { colorFor } from '../../src/lib/tag.js';
 
 const ROOT = realpathSync(join(dirname(fileURLToPath(import.meta.url)), '..', '..'));
 const CACHE = join(process.env.XDG_CACHE_HOME ?? join(homedir(), '.cache'), 'aws-hop-e2e');
+// Well above the slowest in-page wait (about 5 s), so only a call that will never be answered trips it.
+const SEND_TIMEOUT = 20000;
 
 const AWS_CONFIG = `
 [profile shop-prod]
@@ -86,6 +89,8 @@ async function launchChrome(binary, profileDir, port) {
     `--load-extension=${ROOT}`, `--disable-extensions-except=${ROOT}`,
     `--host-resolver-rules=MAP * 127.0.0.1:${port}, EXCLUDE localhost`, '--ignore-certificate-errors',
     '--no-first-run', '--no-default-browser-check', '--disable-gpu',
+    // Otherwise macOS asks for the login keychain password and Chrome stalls until someone answers.
+    '--use-mock-keychain', '--password-store=basic',
   ];
   // GitHub's Ubuntu runners restrict the user namespaces Chrome's sandbox needs.
   if (process.env.CI) args.push('--no-sandbox');
@@ -114,14 +119,29 @@ class Cdp {
     this.pending = new Map();
     this.problems = [];
     ws.addEventListener('message', (event) => this.onMessage(JSON.parse(event.data)));
+    ws.addEventListener('close', () => this.abandon(() => true, 'the browser connection closed'));
+  }
+
+  /** Rejects the pending calls `matches` selects, so a closed tab fails a check instead of hanging the run. */
+  abandon(matches, reason) {
+    for (const [id, call] of this.pending) {
+      if (!matches(call)) continue;
+      clearTimeout(call.timer);
+      this.pending.delete(id);
+      call.reject(new Error(`${call.method}: ${reason}`));
+    }
   }
 
   onMessage(message) {
     if (message.id) {
-      const { resolve, reject } = this.pending.get(message.id);
+      const call = this.pending.get(message.id);
+      if (!call) return;
+      clearTimeout(call.timer);
       this.pending.delete(message.id);
-      if (message.error) reject(new Error(message.error.message));
-      else resolve(message.result);
+      if (message.error) call.reject(new Error(message.error.message));
+      else call.resolve(message.result);
+    } else if (message.method === 'Target.detachedFromTarget') {
+      this.abandon((call) => call.sessionId === message.params.sessionId, 'the tab closed before answering');
     } else if (message.method === 'Runtime.exceptionThrown') {
       this.problems.push(message.params.exceptionDetails.exception?.description ?? message.params.exceptionDetails.text);
     } else if (message.method === 'Runtime.consoleAPICalled' && ['error', 'warning'].includes(message.params.type)) {
@@ -134,7 +154,10 @@ class Cdp {
   send(method, params = {}, sessionId = undefined) {
     const id = (this.nextId += 1);
     this.ws.send(JSON.stringify({ id, method, params, sessionId }));
-    return new Promise((resolve, reject) => this.pending.set(id, { resolve, reject }));
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => this.abandon((call) => call.timer === timer, `no answer in ${SEND_TIMEOUT} ms`), SEND_TIMEOUT);
+      this.pending.set(id, { method, sessionId, timer, resolve, reject });
+    });
   }
 
   async open(url) {

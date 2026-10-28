@@ -55,6 +55,12 @@ export default Object.freeze({
   'import.result.skipped': 'Skipped {count}:',
   'import.result.empty': 'Paste a file or load one first.',
   'import.confirmReplace': 'Replace all {current} accounts with the {incoming} imported ones?',
+  'import.result.nothingSelected': 'Select at least one account to import.',
+  'import.preview.heading': 'Importing {selected} of {count}. Clear a box to leave an account out.',
+  'import.preview.added': 'new',
+  'import.preview.updated': 'updates your account',
+  'import.preview.exists': 'already in your list as {name}; merging skips it',
+  'import.preview.dropped': 'Replacing all accounts also removes: {names}',
 
   'guard.unregistered': 'Account not in your list',
   'guard.tooltip': 'AWS Hop: {label} ({account}), detected from the {source}. Click to minimize.',

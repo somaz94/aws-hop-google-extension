@@ -89,7 +89,8 @@ function keepEdits(current, incoming) {
 /**
  * Incoming profiles replace existing ones with the same id, or else the same sign-in method and name.
  * One that signs in to the same place as an existing profile under another name is left out and
- * reported in `existing`, so importing the same config twice never doubles the list.
+ * reported in `existing`, so importing the same config twice never doubles the list. `outcomes` says,
+ * per incoming profile and in its order, what happened to it: `added`, `updated` or `exists` (with `as`).
  */
 export function mergeProfiles(current, incoming) {
   const merged = [...current];
@@ -99,21 +100,34 @@ export function mergeProfiles(current, incoming) {
   let added = 0;
   let updated = 0;
   const existing = [];
+  const outcomes = [];
   for (const profile of incoming) {
     const index = byId.get(profile.id) ?? byKey.get(naturalKey(profile));
     if (index !== undefined) {
       merged[index] = keepEdits(merged[index], profile);
       byTarget.set(profileTarget(merged[index]), merged[index]);
       updated += 1;
+      outcomes.push({ profile, status: 'updated' });
     } else if (byTarget.has(profileTarget(profile))) {
-      existing.push({ name: profile.name, reason: t('import.skip.exists', { name: byTarget.get(profileTarget(profile)).name }) });
+      const as = byTarget.get(profileTarget(profile)).name;
+      existing.push({ name: profile.name, reason: t('import.skip.exists', { name: as }) });
+      outcomes.push({ profile, status: 'exists', as });
     } else {
       byId.set(profile.id, merged.length);
       byKey.set(naturalKey(profile), merged.length);
       byTarget.set(profileTarget(profile), profile);
       merged.push(profile);
       added += 1;
+      outcomes.push({ profile, status: 'added' });
     }
   }
-  return { profiles: merged, added, updated, existing };
+  return { profiles: merged, added, updated, existing, outcomes };
+}
+
+/** The current profiles that replacing the list with `incoming` would drop: none of them matches by id, method and name, or sign-in target. */
+export function droppedByReplace(current, incoming) {
+  const ids = new Set(incoming.map((profile) => profile.id));
+  const keys = new Set(incoming.map(naturalKey));
+  const targets = new Set(incoming.map(profileTarget));
+  return current.filter((profile) => !ids.has(profile.id) && !keys.has(naturalKey(profile)) && !targets.has(profileTarget(profile)));
 }

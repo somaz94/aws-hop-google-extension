@@ -151,6 +151,9 @@ textarea { resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, m
 
 .result.error { border-left-color: var(--danger); }
 .result ul { margin: 4px 0 0; padding-left: 18px; }
+.result ul.import-preview { max-height: 240px; overflow-y: auto; padding-left: 0; list-style: none; }
+.import-preview .check { margin: 2px 0; }
+.import-preview .status { font-size: 12px; }
 
 .field {
   display: flex;

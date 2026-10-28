@@ -1,7 +1,7 @@
 import { describe, test, expect, afterEach } from '@jest/globals';
 import { parseIni, profilesFromAwsConfig } from '../src/importers/awsConfig.js';
 import { EXPORT_FORMAT, EXPORT_VERSION, exportProfiles, profilesFromJson } from '../src/importers/json.js';
-import { dedupeProfiles, detectFormat, importProfiles, mergeProfiles } from '../src/importers/index.js';
+import { dedupeProfiles, detectFormat, droppedByReplace, importProfiles, mergeProfiles } from '../src/importers/index.js';
 import { setLanguage } from '../src/i18n/index.js';
 import { normalizeProfile } from '../src/lib/profile.js';
 
@@ -285,5 +285,29 @@ describe('mergeProfiles', () => {
     expect(profiles).toHaveLength(2);
     expect(added).toBe(0);
     expect(present).toEqual([{ name: 'terraform-shop', reason: 'already in your list as Shop renamed' }]);
+  });
+
+  test('reports what happened to each incoming profile, in import order', () => {
+    const incoming = [iam('y', 'Data', '444455556666'), iam('x', 'shop', '111122223333'), iam('w', 'terraform-billing', '222233334444')];
+    expect(mergeProfiles(existing, incoming).outcomes.map(({ profile, status, as }) => [profile.name, status, as])).toEqual([
+      ['Data', 'added', undefined],
+      ['shop', 'updated', undefined],
+      ['terraform-billing', 'exists', 'Billing'],
+    ]);
+  });
+});
+
+describe('droppedByReplace', () => {
+  const iam = (id, name, account) => normalizeProfile({ id, name, provider: 'iam-user', fields: { account } });
+  const current = [iam('a', 'Shop', '111122223333'), iam('b', 'Billing', '222233334444'), iam('c', 'Data', '444455556666')];
+
+  test('keeps a current profile matched by id, by method and name, or by sign-in target', () => {
+    const incoming = [iam('a', 'renamed', '999999999999'), iam('n', 'billing', '777788889999'), iam('m', 'shop-data', '444455556666')];
+    expect(droppedByReplace(current, incoming)).toEqual([]);
+  });
+
+  test('lists the rest, and everything when nothing is imported', () => {
+    expect(droppedByReplace(current, [iam('n', 'Shop', '111122223333')]).map((p) => p.name)).toEqual(['Billing', 'Data']);
+    expect(droppedByReplace(current, [])).toEqual(current);
   });
 });

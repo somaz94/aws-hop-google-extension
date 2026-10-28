@@ -96,8 +96,10 @@ async function launchChrome(binary, profileDir, port) {
   if (process.env.CI) args.push('--no-sandbox');
   const chrome = spawn(binary, [...args, 'about:blank'], { stdio: 'ignore' });
   const portFile = join(profileDir, 'DevToolsActivePort');
-  for (let i = 0; i < 100 && !existsSync(portFile); i += 1) await sleep(100);
-  const [debugPort, path] = readFileSync(portFile, 'utf8').trim().split('\n');
+  // Chrome can create the file before it has written both lines.
+  const readPort = () => (existsSync(portFile) ? readFileSync(portFile, 'utf8').trim().split('\n') : []);
+  for (let i = 0; i < 100 && readPort().length < 2; i += 1) await sleep(100);
+  const [debugPort, path] = readPort();
   return { chrome, url: `ws://127.0.0.1:${debugPort}${path}` };
 }
 
@@ -326,6 +328,36 @@ async function run(cdp) {
   check('a profile for an account already in the list is not added', [copy.result, copy.skipped, copy.rows.length], [
     'Added 0, updated 0, 1 already in the list.', ['shop-prod-copy: already in your list as shop-prod'], 3,
   ]);
+
+  const PREVIEWED = '[profile shop-dev]\nrole_arn = arn:aws:iam::444455556666:role/Developer\n\n[profile billing]\naws_account_id = 123456789012\n\n[profile shop-prod-copy]\naws_account_id = 111122223333';
+  await options.eval(`(() => {
+    const text = document.getElementById('import-text');
+    text.value = ${JSON.stringify(PREVIEWED)};
+    text.dispatchEvent(new Event('input', { bubbles: true }));
+  })()`);
+  const preview = await waitFor(() => options.eval(`(() => {
+    const box = document.getElementById('import-preview');
+    const rows = [...box.querySelectorAll('.import-preview li')].map((li) => li.querySelector('.name').textContent + ': ' + li.querySelector('.status').textContent);
+    return !box.hidden && rows.length === 3 ? { rows, dropped: box.lastChild.textContent } : null;
+  })()`), 'the import preview').catch(() => null);
+  check('previews each account against the list before importing', preview, {
+    rows: ['shop-dev: updates your account', 'billing: new', 'shop-prod-copy: already in your list as shop-prod; merging skips it'],
+    dropped: 'Replacing all accounts also removes: data-sso',
+  });
+  const partial = await options.eval(`(async () => {
+    document.querySelectorAll('.import-preview input')[1].click();
+    const heading = document.getElementById('import-preview').firstChild.textContent;
+    const box = document.getElementById('import-result');
+    document.getElementById('import-merge').click();
+    for (let i = 0; i < 50 && box.hidden; i += 1) await new Promise((r) => setTimeout(r, 100));
+    return { heading, result: box.firstChild.textContent, rows: [...document.querySelectorAll('.profile .name')].map((n) => n.textContent) };
+  })()`);
+  check('and merges only the accounts left selected', partial, {
+    heading: 'Importing 2 of 3. Clear a box to leave an account out.',
+    result: 'Added 0, updated 1, 1 already in the list.',
+    rows: ['shop-prod', 'shop-dev', 'data-sso'],
+  });
+  await options.eval(`document.getElementById('import-text').value = ''`);
   const stored = await options.eval(`chrome.storage.sync.get(null).then((items) => Object.values(items).filter((v) => v && v.fields).map((p) => [p.name, p.tag, p.guarded]))`);
   check('stores tags and protects production by name', stored.sort(), [['data-sso', 'test', false], ['shop-dev', '', false], ['shop-prod', 'prod', true]]);
 

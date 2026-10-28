@@ -158,6 +158,8 @@ Paste the configuration from its Configure page into the Import box. It is told 
 
 **Merge** adds new accounts and updates ones with the same name and sign-in method. **Replace** swaps the whole list. **Export** downloads every account as JSON.
 
+As soon as you paste or load a file, a preview lists each account it holds as new, an update, or already in your list, and which accounts **Replace** would remove. Clear an account's box to leave it out; both buttons import only what stays selected.
+
 <br/>
 
 ## Permissions

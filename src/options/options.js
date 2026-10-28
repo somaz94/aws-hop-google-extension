@@ -7,7 +7,7 @@ import { createStore } from '../lib/store.js';
 import { SUGGESTED_TAGS } from '../lib/tag.js';
 import { accountIdCommand, CLI_SHELLS, getShell, shellForPlatform } from '../importers/accountIdCommand.js';
 import { exportProfiles } from '../importers/json.js';
-import { importProfiles, mergeProfiles } from '../importers/index.js';
+import { droppedByReplace, importProfiles, mergeProfiles } from '../importers/index.js';
 import { getProvider, listProviders } from '../providers/index.js';
 
 const store = createStore();
@@ -20,6 +20,8 @@ const providerFields = $('provider-fields');
 let profiles = [];
 let editingId = null;
 let cliShell = shellForPlatform(null);
+// The parsed import and the rows cleared in its preview, so both buttons import exactly what the preview shows.
+let importDraft = null;
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -103,6 +105,7 @@ function renderTagSuggestions() {
 async function reload() {
   profiles = await store.loadProfiles();
   renderList();
+  renderImportPreview();
 }
 
 async function move(index, delta) {
@@ -298,14 +301,79 @@ function showImportResult(message, skipped = [], isError = false) {
   box.hidden = false;
 }
 
-function parseImport() {
+/** The parsed import for the current text; parsed again only when the text changed. Throws on a malformed file. */
+function currentImport() {
   const text = $('import-text').value;
-  if (!text.trim()) {
+  if (importDraft?.text !== text) importDraft = { text, result: importProfiles(text), excluded: new Set() };
+  return importDraft;
+}
+
+const isSelected = (draft) => (_, index) => !draft.excluded.has(index);
+
+function previewStatus({ status, as }) {
+  if (status === 'exists') return t('import.preview.exists', { name: as });
+  return t(`import.preview.${status}`);
+}
+
+/** Lists what the text would import, against the current accounts, with a box per account to leave it out. */
+function renderImportPreview() {
+  const box = $('import-preview');
+  if (!$('import-text').value.trim()) {
+    importDraft = null;
+    box.hidden = true;
+    return;
+  }
+  let draft;
+  try {
+    draft = currentImport();
+  } catch (error) {
+    box.replaceChildren(element('div', 'error', error.message));
+    box.hidden = false;
+    return;
+  }
+  const { profiles: incoming, skipped } = draft.result;
+  const selected = incoming.filter(isSelected(draft));
+  box.replaceChildren(element('div', '', t('import.preview.heading', { selected: selected.length, count: incoming.length })));
+  const list = element('ul', 'import-preview');
+  mergeProfiles(profiles, incoming).outcomes.forEach((outcome, index) => {
+    const checkbox = element('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = !draft.excluded.has(index);
+    checkbox.addEventListener('change', () => {
+      if (checkbox.checked) draft.excluded.delete(index);
+      else draft.excluded.add(index);
+      renderImportPreview();
+    });
+    const label = element('label', 'check');
+    label.append(checkbox, element('span', 'name', outcome.profile.name), element('span', 'muted status', previewStatus(outcome)));
+    list.append(element('li'));
+    list.lastChild.append(label);
+  });
+  box.append(list);
+  const dropped = droppedByReplace(profiles, selected);
+  if (dropped.length) box.append(element('div', 'muted', t('import.preview.dropped', { names: dropped.map((profile) => profile.name).join(', ') })));
+  if (skipped.length) {
+    const items = element('ul');
+    for (const { name, reason } of skipped) items.append(element('li', '', `${name}: ${reason}`));
+    box.append(element('div', 'muted', t('import.result.skipped', { count: skipped.length })), items);
+  }
+  box.hidden = false;
+}
+
+/** The accounts the preview has selected, or null after showing why there is nothing to import. */
+function selectedImport() {
+  if (!$('import-text').value.trim()) {
     showImportResult(t('import.result.empty'), [], true);
     return null;
   }
   try {
-    return importProfiles(text);
+    const draft = currentImport();
+    const selected = draft.result.profiles.filter(isSelected(draft));
+    if (draft.result.profiles.length && !selected.length) {
+      showImportResult(t('import.result.nothingSelected'), [], true);
+      return null;
+    }
+    return { profiles: selected, skipped: draft.result.skipped };
   } catch (error) {
     showImportResult(error.message, [], true);
     return null;
@@ -324,7 +392,7 @@ async function applyImport(next, message, skipped) {
 }
 
 $('import-merge').addEventListener('click', async () => {
-  const result = parseImport();
+  const result = selectedImport();
   if (!result) return;
   const merged = mergeProfiles(profiles, result.profiles);
   const message = t('import.result.merged', { added: merged.added, updated: merged.updated, existing: merged.existing.length });
@@ -332,7 +400,7 @@ $('import-merge').addEventListener('click', async () => {
 });
 
 $('import-replace').addEventListener('click', async () => {
-  const result = parseImport();
+  const result = selectedImport();
   if (!result) return;
   if (!confirm(t('import.confirmReplace', { current: profiles.length, incoming: result.profiles.length }))) return;
   await applyImport(result.profiles, t('import.result.replaced', { count: result.profiles.length }), result.skipped);
@@ -342,6 +410,15 @@ $('import-file').addEventListener('change', async (event) => {
   const [file] = event.target.files;
   if (file) $('import-text').value = await file.text();
   event.target.value = '';
+  $('import-result').hidden = true;
+  renderImportPreview();
+});
+
+let previewTimer = null;
+$('import-text').addEventListener('input', () => {
+  $('import-result').hidden = true;
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(renderImportPreview, 200);
 });
 
 $('cli-copy').addEventListener('click', async () => {
@@ -390,6 +467,9 @@ function applyLanguage(settings) {
   fillProviderSelect();
   renderCliHelper();
   renderList();
+  // Skip reasons are worded when the text is parsed, so parse again in the new language.
+  importDraft = null;
+  renderImportPreview();
 }
 
 async function loadSettings() {

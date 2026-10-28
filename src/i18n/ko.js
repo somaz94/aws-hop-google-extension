@@ -54,6 +54,12 @@ export default Object.freeze({
   'import.result.skipped': '건너뛴 항목 {count}개:',
   'import.result.empty': '먼저 파일 내용을 붙여넣거나 파일을 불러오세요.',
   'import.confirmReplace': '계정 {current}개를 모두 지우고 가져온 {incoming}개로 바꿀까요?',
+  'import.result.nothingSelected': '가져올 계정을 하나 이상 고르세요.',
+  'import.preview.heading': '{count}개 중 {selected}개를 가져옵니다. 빼려면 체크를 해제하세요.',
+  'import.preview.added': '새로 추가',
+  'import.preview.updated': '기존 계정 갱신',
+  'import.preview.exists': '이미 {name}(으)로 있어 합치기에서는 건너뜁니다',
+  'import.preview.dropped': '전체 바꾸기를 하면 지워지는 계정: {names}',
 
   'guard.unregistered': '목록에 없는 계정',
   'guard.tooltip': 'AWS Hop: {label} ({account}). {source}에서 감지했습니다. 클릭하면 접힙니다.',

@@ -53,6 +53,18 @@ describe('profiles', () => {
     expect(storage.data.profileOrder).toEqual(['b']);
   });
 
+  test('restoreProfiles brings deleted profiles back to their places in one write', async () => {
+    const { store, storage } = setup();
+    await store.replaceAll([profile('a'), profile('b'), profile('c')]);
+    await store.deleteProfiles(['b']);
+    await store.saveProfile(profile('d'));
+    const writes = jest.spyOn(storage.area, 'set');
+    await store.restoreProfiles([profile('b')], ['a', 'b', 'c']);
+    expect(writes).toHaveBeenCalledTimes(1);
+    expect(storage.data.profileOrder).toEqual(['a', 'b', 'c', 'd']);
+    expect(storage.data['profile:b'].name).toBe('b');
+  });
+
   test('deleteProfile and saveProfile cope with a missing order', async () => {
     const { store, storage } = setup({ 'profile:a': profile('a') });
     await store.deleteProfile('a');

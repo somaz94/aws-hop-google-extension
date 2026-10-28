@@ -63,3 +63,10 @@ export function suggestionsFor(profiles, builtInTags = []) {
   const groups = new Set(profiles.map((profile) => profile.group).filter(Boolean));
   return { tags: [...tags], groups: [...groups] };
 }
+
+/** The order after restoring deleted ids: their earlier places for every id in `current`, then ids added since. */
+export function restoredOrder(previous, current) {
+  const present = new Set(current);
+  const before = new Set(previous);
+  return [...previous.filter((id) => present.has(id)), ...current.filter((id) => !before.has(id))];
+}

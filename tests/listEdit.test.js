@@ -1,5 +1,7 @@
 import { describe, test, expect } from '@jest/globals';
-import { bulkEdit, keepSelected, moveBy, moveNextTo, selectionState, selectRange, suggestionsFor } from '../src/lib/listEdit.js';
+import {
+  bulkEdit, keepSelected, moveBy, moveNextTo, restoredOrder, selectionState, selectRange, suggestionsFor,
+} from '../src/lib/listEdit.js';
 import { normalizeProfile } from '../src/lib/profile.js';
 
 const ids = ['a', 'b', 'c', 'd'];
@@ -115,5 +117,15 @@ describe('suggestionsFor', () => {
 
   test('works without built-in tags', () => {
     expect(suggestionsFor([])).toEqual({ tags: [], groups: [] });
+  });
+});
+
+describe('restoredOrder', () => {
+  test('restored ids go back to their earlier places', () => {
+    expect(restoredOrder(['a', 'b', 'c', 'd'], ['a', 'd', 'b', 'c'])).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  test('ids added since the delete go last, and ids removed since stay out', () => {
+    expect(restoredOrder(['a', 'b', 'c'], ['b', 'x', 'c'])).toEqual(['b', 'c', 'x']);
   });
 });

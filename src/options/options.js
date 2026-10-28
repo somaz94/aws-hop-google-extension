@@ -10,6 +10,7 @@ import { $ } from './dom.js';
 import { createEditor } from './editor.js';
 import { createImportExport } from './importExport.js';
 import { createAccountList } from './list.js';
+import { createUndo } from './undo.js';
 
 const store = createStore();
 const themer = createThemer(document);
@@ -24,8 +25,9 @@ async function reload() {
 }
 
 const editor = createEditor({ store, profiles: currentProfiles, reload });
-const accounts = createAccountList({ store, profiles: currentProfiles, reload, onEdit: editor.open });
-attachBulkBar({ store, reload, selection: accounts });
+const undo = createUndo({ store, reload });
+const accounts = createAccountList({ store, profiles: currentProfiles, reload, onEdit: editor.open, undo });
+attachBulkBar({ store, reload, selection: accounts, undo, order: () => profiles.map((profile) => profile.id) });
 const importExport = createImportExport({ store, profiles: currentProfiles, settings: () => settings, reload });
 const cliHelper = createCliHelper();
 

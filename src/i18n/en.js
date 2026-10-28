@@ -169,6 +169,8 @@ export default Object.freeze({
   'options.bulk.unprotect': 'Unprotect',
   'options.bulk.clear': 'Clear selection',
   'options.bulk.help': 'Setting an empty tag or group clears it.\nShift-click a box to select every account up to it.',
+  'options.undo': 'Undo',
+  'options.undo.deleted': 'Deleted {names}.',
   'options.bulk.confirmDelete': 'Delete these {count} accounts?\n{names}',
 
   'editor.add': 'Add account',

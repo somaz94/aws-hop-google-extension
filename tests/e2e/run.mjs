@@ -650,6 +650,20 @@ async function run(cdp) {
   await searchList('');
   check('deletes the selected accounts at once', (await storedBecome([['shop-prod', '', true], ['shop-dev', '', false], ['data-sso', '', false]], 'the bulk delete')).map(([name]) => name),
     ['shop-prod', 'shop-dev', 'data-sso']);
+  const undoText = () => options.eval(`document.getElementById('undo-bar').hidden ? '' : document.getElementById('undo-text').textContent`);
+  check('and offers to undo it', await undoText(), 'Deleted tmp-a, tmp-b.');
+  await options.eval(`document.getElementById('undo').click()`);
+  const restored = [['shop-prod', '', true], ['shop-dev', '', false], ['data-sso', '', false], ['tmp-a', '', false], ['tmp-b', '', false]];
+  check('Undo puts them back in their places', (await storedBecome(restored, 'the undo')).map(([name]) => name), restored.map(([name]) => name));
+  await options.eval(`document.querySelector('.profile:nth-child(4) [data-action="delete"]').click()`);
+  await storedBecome([['shop-prod', '', true], ['shop-dev', '', false], ['data-sso', '', false], ['tmp-b', '', false]], 'the single delete');
+  check('a single delete offers undo too', await undoText(), 'Deleted tmp-a.');
+  await options.eval(`document.getElementById('undo').click()`);
+  check('and restores it between its neighbours', (await storedBecome(restored, 'the single undo')).map(([name]) => name), restored.map(([name]) => name));
+  await searchList('tmp');
+  await options.eval(`document.getElementById('select-all').click(); document.getElementById('bulk-delete').click()`);
+  await searchList('');
+  await storedBecome([['shop-prod', '', true], ['shop-dev', '', false], ['data-sso', '', false]], 'the cleanup');
 
   console.log('Korean');
   await choose(options, 'setting-language', 'ko');

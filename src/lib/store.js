@@ -1,4 +1,5 @@
 import { LANGUAGE_SETTINGS } from '../i18n/index.js';
+import { restoredOrder } from './listEdit.js';
 import { normalizeProfile } from './profile.js';
 import { THEMES } from './theme.js';
 
@@ -94,6 +95,14 @@ export function createStore({ area = globalThis.chrome?.storage?.sync, onChanged
     saveProfiles,
     deleteProfile: (id) => deleteProfiles([id]),
     deleteProfiles,
+
+    /** Puts deleted profiles back where they were in `previousOrder`, in one write. */
+    async restoreProfiles(profiles, previousOrder) {
+      const current = [...new Set([...await readOrder(), ...profiles.map((profile) => profile.id)])];
+      const items = { [ORDER_KEY]: restoredOrder(previousOrder, current) };
+      for (const profile of profiles) items[profileKey(profile.id)] = profile;
+      await area.set(items);
+    },
 
     async reorder(ids) {
       await writeOrder(ids);

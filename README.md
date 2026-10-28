@@ -46,7 +46,7 @@ Environments differ from project to project, so AWS Hop does not impose any. Eac
 | **Color** | Picked automatically from the group, or from the first word of the name without one, so `shop-prod` and `shop-dev` share a color. You can choose your own |
 | **Protected** | Frames the console in red and prefixes the tab title with the account name. Turn it on for every account where a mistake is costly; there can be as many as you like, and the name prefix keeps their tabs apart |
 
-The tag and the protected flag can be changed straight from the account list in the options. The list can be searched, and reordered by dragging a row by its handle or with its arrow buttons; reordering pauses while a search is active, because results are ranked. Tick several accounts, or Shift-click to tick every account up to one, to set their tag or group, protect or unprotect them, or delete them in one go.
+The tag and the protected flag can be changed straight from the account list in the options. The list can be searched, and reordered by dragging a row by its handle or with its arrow buttons; reordering pauses while a search is active, because results are ranked. Tick several accounts, or Shift-click to tick every account up to one, to set their tag or group, protect or unprotect them, or delete them in one go. A delete can be undone for a few seconds afterwards.
 
 <br/>
 

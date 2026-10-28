@@ -6,7 +6,7 @@ import { TAG_MAX } from '../lib/tag.js';
 import { $ } from './dom.js';
 
 /** The bar that changes the tag, group or protection of every selected account at once, or deletes them. */
-export function attachBulkBar({ store, reload, selection }) {
+export function attachBulkBar({ store, reload, selection, undo, order }) {
   $('bulk-tag').maxLength = TAG_MAX;
   $('bulk-group').maxLength = GROUP_MAX;
 
@@ -33,8 +33,7 @@ export function attachBulkBar({ store, reload, selection }) {
     const doomed = selection.selectedProfiles();
     const names = doomed.map((profile) => profile.name).join(', ');
     if (!doomed.length || !confirm(t('options.bulk.confirmDelete', { count: doomed.length, names }))) return;
-    await store.deleteProfiles(doomed.map((profile) => profile.id));
-    await reload();
+    await undo.deleteProfiles(doomed, order());
   });
 
   $('bulk-clear').addEventListener('click', () => selection.clearSelection());

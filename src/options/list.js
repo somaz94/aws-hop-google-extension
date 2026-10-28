@@ -41,7 +41,7 @@ function inlineControls(profile) {
 }
 
 /** The account list: search, selection, drag and arrow reordering, inline tag and protect edits, and the row buttons. */
-export function createAccountList({ store, profiles, reload, onEdit }) {
+export function createAccountList({ store, profiles, reload, onEdit, undo }) {
   const list = $('profile-list');
   let query = '';
   // The rows on screen, in screen order; the selection never holds an id outside them.
@@ -154,10 +154,7 @@ export function createAccountList({ store, profiles, reload, onEdit }) {
       case 'edit': return onEdit(profile);
       case 'duplicate': return onEdit({ ...profile, id: null, name: t('options.copyName', { name: profile.name }) });
       case 'delete':
-        if (confirm(t('options.confirmDelete', { name: profile.name }))) {
-          await store.deleteProfile(id);
-          await reload();
-        }
+        if (confirm(t('options.confirmDelete', { name: profile.name }))) await undo.deleteProfiles([profile], allIds());
         return undefined;
       default: return undefined;
     }

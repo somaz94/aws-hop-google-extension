@@ -4,7 +4,7 @@ import { formatAccountId } from '../lib/account.js';
 import { readableTextColor } from '../lib/color.js';
 import { identityFromHost } from '../lib/identity.js';
 import { matchProfile } from '../lib/match.js';
-import { MSG } from '../lib/messages.js';
+import { addAccountHash, MSG } from '../lib/messages.js';
 import { openProfile } from '../lib/open.js';
 import { profileColor, profileLabel, profileMeta } from '../lib/profile.js';
 import { createRecentStore, recentProfiles } from '../lib/recent.js';
@@ -111,7 +111,7 @@ function renderCurrent(identity) {
     const add = element('button', 'link-btn', t('popup.addThis'));
     add.type = 'button';
     add.title = t('popup.addThisTitle');
-    add.addEventListener('click', () => openOptions(`#add=${encodeURIComponent(identity.accounts[0])}`));
+    add.addEventListener('click', () => openOptions(addAccountHash(identity.accounts[0])));
     ui.current.append(add);
   }
   ui.current.hidden = false;

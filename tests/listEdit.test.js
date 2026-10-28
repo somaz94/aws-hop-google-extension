@@ -1,5 +1,5 @@
 import { describe, test, expect } from '@jest/globals';
-import { bulkEdit, keepSelected, moveBy, moveNextTo, selectionState, selectRange } from '../src/lib/listEdit.js';
+import { bulkEdit, keepSelected, moveBy, moveNextTo, selectionState, selectRange, suggestionsFor } from '../src/lib/listEdit.js';
 import { normalizeProfile } from '../src/lib/profile.js';
 
 const ids = ['a', 'b', 'c', 'd'];
@@ -104,5 +104,16 @@ describe('bulkEdit', () => {
     const [next] = bulkEdit(profiles, ['c'], { guarded: false });
     expect(next).toEqual({ ...profiles[2], guarded: false });
     expect(profiles[2].guarded).toBe(true);
+  });
+});
+
+describe('suggestionsFor', () => {
+  test('lists tags in use, then the built-in ones, and groups in use, each once', () => {
+    const profiles = [profile('a', { tag: 'qa', group: 'shop' }), profile('b', { tag: 'prod', group: 'shop' }), profile('c')];
+    expect(suggestionsFor(profiles, ['prod', 'dev'])).toEqual({ tags: ['qa', 'prod', 'dev'], groups: ['shop'] });
+  });
+
+  test('works without built-in tags', () => {
+    expect(suggestionsFor([])).toEqual({ tags: [], groups: [] });
   });
 });

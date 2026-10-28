@@ -1,7 +1,7 @@
 import { describe, test, expect, afterEach } from '@jest/globals';
 import { parseIni, profilesFromAwsConfig } from '../src/importers/awsConfig.js';
 import { EXPORT_FORMAT, EXPORT_VERSION, exportProfiles, profilesFromJson } from '../src/importers/json.js';
-import { dedupeProfiles, detectFormat, droppedByReplace, importProfiles, mergeProfiles } from '../src/importers/index.js';
+import { dedupeProfiles, detectFormat, droppedByReplace, importProfiles, mergeProfiles, selectImported } from '../src/importers/index.js';
 import { setLanguage } from '../src/i18n/index.js';
 import { normalizeProfile } from '../src/lib/profile.js';
 
@@ -309,5 +309,21 @@ describe('droppedByReplace', () => {
   test('lists the rest, and everything when nothing is imported', () => {
     expect(droppedByReplace(current, [iam('n', 'Shop', '111122223333')]).map((p) => p.name)).toEqual(['Billing', 'Data']);
     expect(droppedByReplace(current, [])).toEqual(current);
+  });
+});
+
+describe('selectImported', () => {
+  const result = { profiles: [{ id: 'a' }, { id: 'b' }, { id: 'c' }] };
+
+  test('leaves out the cleared rows', () => {
+    expect(selectImported(result, new Set([1]))).toEqual({ profiles: [{ id: 'a' }, { id: 'c' }], nothingSelected: false });
+  });
+
+  test('clearing every row means nothing is selected', () => {
+    expect(selectImported(result, new Set([0, 1, 2]))).toEqual({ profiles: [], nothingSelected: true });
+  });
+
+  test('an import with no accounts is not a cleared selection', () => {
+    expect(selectImported({ profiles: [] }, new Set())).toEqual({ profiles: [], nothingSelected: false });
   });
 });

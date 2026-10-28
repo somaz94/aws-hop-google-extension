@@ -6,6 +6,8 @@ import { colorFor, firstToken, TAG_MAX } from './tag.js';
 
 export const NAME_MAX = 64;
 export const GROUP_MAX = 40;
+// Editor inputs for a sign-in method's own fields are named with this prefix, apart from the common ones.
+export const FIELD_PREFIX = 'field:';
 
 // Older versions stored a fixed environment instead of a free-form tag; such accounts are read as this tag.
 const LEGACY_ENV_TAGS = Object.freeze({ prod: 'prod', stage: 'stage', dev: 'dev', test: 'test', other: '' });
@@ -69,6 +71,15 @@ export function validateProfile(profile) {
     if (message) errors.push({ field: field.key, message });
   }
   return errors;
+}
+
+/** The sign-in method's fields out of form entries, keyed without FIELD_PREFIX. */
+export function fieldValues(entries) {
+  const values = {};
+  for (const [key, value] of entries) {
+    if (key.startsWith(FIELD_PREFIX)) values[key.slice(FIELD_PREFIX.length)] = value;
+  }
+  return values;
 }
 
 /** "tag · name", or just the name: how an account is named on the console label, its menu and the address bar. */

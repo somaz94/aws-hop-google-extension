@@ -1,6 +1,6 @@
 import { describe, test, expect } from '@jest/globals';
 import {
-  buildProfileUrl, GROUP_MAX, NAME_MAX, normalizeProfile, profileAccount, profileColor, profileLabel, profileMeta, profileRoles, profileTarget, validateProfile,
+  buildProfileUrl, fieldValues, GROUP_MAX, NAME_MAX, normalizeProfile, profileAccount, profileColor, profileLabel, profileMeta, profileRoles, profileTarget, validateProfile,
 } from '../src/lib/profile.js';
 import { colorFor, TAG_MAX } from '../src/lib/tag.js';
 
@@ -73,6 +73,12 @@ describe('validateProfile', () => {
     expect(validateProfile(normalizeProfile({ ...valid, fields: {} }, { idFactory }))).toEqual([
       { field: 'account', message: 'Account ID or alias is required' },
     ]);
+  });
+});
+
+describe('fieldValues', () => {
+  test('keeps only the prefixed entries, without the prefix', () => {
+    expect(fieldValues([['name', 'x'], ['field:account', '111122223333'], ['field:roleName', 'Admin']])).toEqual({ account: '111122223333', roleName: 'Admin' });
   });
 });
 

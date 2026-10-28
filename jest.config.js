@@ -3,7 +3,7 @@ export default {
   testMatch: ['**/tests/**/*.test.js'],
   collectCoverageFrom: [
     'src/**/*.js',
-    // Chrome-API glue with no logic of its own; everything it calls is covered through src/lib.
+    // DOM and Chrome-API glue; the logic it calls lives in src/lib and src/importers and is tested there.
     '!src/popup/**',
     '!src/options/**',
     '!src/content/loader.js',

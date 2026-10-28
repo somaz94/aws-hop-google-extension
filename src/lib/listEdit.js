@@ -56,3 +56,10 @@ export function bulkEdit(profiles, ids, changes) {
     .filter(([before, after]) => BULK_FIELDS.some((key) => before[key] !== after[key]))
     .map(([, after]) => after);
 }
+
+/** Tag and group values to suggest: the ones already in use first, then the built-in tags. */
+export function suggestionsFor(profiles, builtInTags = []) {
+  const tags = new Set([...profiles.map((profile) => profile.tag).filter(Boolean), ...builtInTags]);
+  const groups = new Set(profiles.map((profile) => profile.group).filter(Boolean));
+  return { tags: [...tags], groups: [...groups] };
+}

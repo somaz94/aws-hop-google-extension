@@ -129,3 +129,9 @@ export function droppedByReplace(current, incoming) {
   const targets = new Set(incoming.map(profileTarget));
   return current.filter((profile) => !ids.has(profile.id) && !keys.has(naturalKey(profile)) && !targets.has(profileTarget(profile)));
 }
+
+/** The parsed accounts left selected in the preview; `nothingSelected` when there were some and every one was cleared. */
+export function selectImported(result, excluded) {
+  const profiles = result.profiles.filter((_, index) => !excluded.has(index));
+  return { profiles, nothingSelected: result.profiles.length > 0 && profiles.length === 0 };
+}

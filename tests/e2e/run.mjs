@@ -520,6 +520,7 @@ async function run(cdp) {
     () => options.eval(`chrome.storage.local.get('recentProfiles').then((items) => (items.recentProfiles ? null : 'cleared'))`),
     'the recent list to clear',
   ).catch(() => null), 'cleared');
+  check('two settings changed back to back both stick', await options.eval(`chrome.storage.sync.get('settings').then(({ settings }) => [settings.confirmGuarded, settings.showRecent])`), [false, false]);
 
   console.log('Korean');
   await choose(options, 'setting-language', 'ko');

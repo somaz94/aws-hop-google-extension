@@ -482,14 +482,21 @@ async function loadSettings() {
   applyLanguage(settings);
 }
 
+// One save at a time: each reloads the settings, and saving refreshes the inputs, so two quick changes could undo each other.
+let settingsSaved = Promise.resolve();
+
 for (const key of SETTING_INPUTS) {
-  $(`setting-${key}`).addEventListener('change', async () => {
-    const settings = await store.loadSettings();
+  $(`setting-${key}`).addEventListener('change', () => {
     const input = $(`setting-${key}`);
-    settings[key] = input.type === 'checkbox' ? input.checked : input.value;
-    await store.saveSettings(settings);
-    // Turning the recent list off also forgets it, so nothing is kept for a feature that is off.
-    if (key === 'showRecent' && !settings.showRecent) await createRecentStore().clear();
+    const value = input.type === 'checkbox' ? input.checked : input.value;
+    const save = async () => {
+      const settings = await store.loadSettings();
+      settings[key] = value;
+      await store.saveSettings(settings);
+      // Turning the recent list off also forgets it, so nothing is kept for a feature that is off.
+      if (key === 'showRecent' && !settings.showRecent) await createRecentStore().clear();
+    };
+    settingsSaved = settingsSaved.then(save, save);
   });
 }
 

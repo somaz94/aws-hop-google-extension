@@ -1,5 +1,5 @@
 import { describe, test, expect } from '@jest/globals';
-import { serial } from '../src/lib/serial.js';
+import { coalesce, serial } from '../src/lib/serial.js';
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -27,5 +27,45 @@ describe('serial', () => {
     const second = run(false);
     await expect(first).rejects.toThrow('quota');
     await expect(second).resolves.toBe('ok');
+  });
+});
+
+describe('coalesce', () => {
+  test('calls made during a run fold into one more run after it', async () => {
+    let runs = 0;
+    const reload = coalesce(async () => {
+      runs += 1;
+      await tick();
+    });
+    await Promise.all([reload(), reload(), reload(), reload()]);
+    expect(runs).toBe(2);
+    await reload();
+    expect(runs).toBe(3);
+  });
+
+  test('a caller during a run waits for the run that starts after its call', async () => {
+    const seen = [];
+    let value = 'old';
+    const reload = coalesce(async () => {
+      const read = value;
+      await tick();
+      seen.push(read);
+    });
+    const first = reload();
+    value = 'new';
+    await reload();
+    expect(seen).toEqual(['old', 'new']);
+    await first;
+  });
+
+  test('a failed run rejects and the next call runs again', async () => {
+    let fail = true;
+    const reload = coalesce(async () => {
+      await tick();
+      if (fail) throw new Error('quota');
+    });
+    await expect(reload()).rejects.toThrow('quota');
+    fail = false;
+    await expect(reload()).resolves.toBeUndefined();
   });
 });

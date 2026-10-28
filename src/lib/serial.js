@@ -10,3 +10,31 @@ export function serial(fn) {
     return last;
   };
 }
+
+/**
+ * Wraps an async function so calls made while it runs fold into a single run after it. A save reloads the page
+ * and so does the storage change it causes; folded, the page reloads at most twice instead of once per call, and
+ * every caller's promise settles after a run that started after its call.
+ */
+export function coalesce(fn) {
+  let running = null;
+  let again = false;
+  async function loop() {
+    try {
+      do {
+        again = false;
+        await fn();
+      } while (again);
+    } finally {
+      running = null;
+    }
+  }
+  return () => {
+    if (running) {
+      again = true;
+      return running;
+    }
+    running = loop();
+    return running;
+  };
+}

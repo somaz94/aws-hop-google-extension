@@ -1,7 +1,7 @@
 import { applyTranslations } from '../i18n/dom.js';
 import { applyLanguageSetting } from '../i18n/index.js';
 import { createRecentStore } from '../lib/recent.js';
-import { serial } from '../lib/serial.js';
+import { coalesce, serial } from '../lib/serial.js';
 import { createStore, DEFAULT_SETTINGS, saveSetting } from '../lib/store.js';
 import { createThemer } from '../lib/theme.js';
 import { attachBulkBar } from './bulk.js';
@@ -18,11 +18,11 @@ let profiles = [];
 let settings = null;
 const currentProfiles = () => profiles;
 
-async function reload() {
+const reload = coalesce(async () => {
   profiles = await store.loadProfiles();
   accounts.render();
   importExport.renderPreview();
-}
+});
 
 const editor = createEditor({ store, profiles: currentProfiles, reload });
 const undo = createUndo({ store, reload });

@@ -34,6 +34,8 @@ let selected = -1;
 let currentProfileId = null;
 let recentIds = [];
 let confirmingId = null;
+// Accounts with a remembered console session, which open straight in it.
+let liveIds = new Set();
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -65,6 +67,11 @@ function renderRow(profile, index) {
     row.append(badge);
   }
   if (profile.id === currentProfileId) row.append(element('span', 'here', t('popup.current')));
+  else if (liveIds.has(profile.id)) {
+    const live = element('span', 'live', t('popup.signedIn'));
+    live.title = t('popup.signedInHint');
+    row.append(live);
+  }
   return row;
 }
 
@@ -194,6 +201,8 @@ async function init() {
   applyTranslations(document);
   render();
   ui.search.focus();
+  liveIds = await sessionStore.liveIds(profiles.map((profile) => profile.id));
+  if (liveIds.size) render();
   const current = await detectCurrent(await activeTab());
   if (current) {
     currentProfileId = current.profileId;

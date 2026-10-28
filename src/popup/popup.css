@@ -162,6 +162,12 @@ body {
   font-weight: 600;
 }
 
+.live {
+  flex: none;
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .empty {
   padding: 20px 12px;
   color: var(--muted);

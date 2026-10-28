@@ -76,6 +76,8 @@ export default Object.freeze({
   'popup.thisTab': '현재 탭',
   'popup.notInList': '목록에 없음',
   'popup.current': '현재',
+  'popup.signedIn': '로그인됨',
+  'popup.signedInHint': '이미 로그인된 콘솔 세션으로 바로 열립니다',
   'popup.empty': '아직 등록된 계정이 없습니다.',
   'popup.addFirst': '첫 계정 추가하기',
   'popup.noMatch': '맞는 계정이 없습니다.',

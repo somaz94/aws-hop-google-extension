@@ -485,6 +485,10 @@ async function run(cdp) {
   console.log('Popup');
   const popup = await cdp.open(`${base}/popup/popup.html`);
   check('lists every account', await waitFor(() => popup.eval(`document.querySelectorAll('.row').length || null`), 'popup rows'), 3);
+  check('marks the account whose console session is remembered as signed in', await waitFor(
+    () => popup.eval(`[...document.querySelectorAll('.row')].filter((row) => row.querySelector('.live')).map((row) => row.querySelector('.name').textContent).join() || null`),
+    'the signed-in mark',
+  ).catch(() => null), 'data-sso');
   check('marks protected accounts', await popup.eval(`[...document.querySelectorAll('.row.guarded .name')].map((n) => n.textContent).sort()`), ['shop-dev', 'shop-prod']);
   const devColor = colorFor('shop').slice(1);
   await popupOpens(cdp, base, 'shop-dev', `https://signin.aws.amazon.com/switchrole?account=444455556666&roleName=Developer&displayName=shop-dev&color=${devColor}`);

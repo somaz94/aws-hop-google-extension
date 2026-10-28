@@ -68,6 +68,17 @@ describe('createSessionStore and openUrlFor', () => {
     expect(storage.data).toEqual({});
   });
 
+  test('liveIds lists the accounts with an unexpired session, without removing the rest', async () => {
+    const { clock, storage, sessions } = setup({ 'session:old': ORIGIN });
+    await sessions.remember('prod', ORIGIN);
+    clock.now += SESSION_MAX_MS - 1;
+    await sessions.remember('sso', ORIGIN);
+    expect([...await sessions.liveIds(['prod', 'sso', 'old', 'none'])]).toEqual(['prod', 'sso']);
+    clock.now += 1;
+    expect([...await sessions.liveIds(['prod', 'sso'])]).toEqual(['sso']);
+    expect(Object.keys(storage.data).sort()).toEqual(['session:old', 'session:prod', 'session:sso']);
+  });
+
   test('drops an entry in an older shape', async () => {
     const { storage, sessions } = setup({ 'session:prod': ORIGIN, recentProfiles: ['prod'] });
     expect(await sessions.originFor('prod')).toBeNull();

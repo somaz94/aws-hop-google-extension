@@ -31,14 +31,20 @@ export function sessionUrl(profile, origin) {
 
 /** One item per account, so two tabs reporting at once cannot overwrite each other. */
 export function createSessionStore({ area = globalThis.chrome?.storage?.local, now = Date.now } = {}) {
+  const isLive = (entry) => Boolean(entry) && typeof entry.origin === 'string' && now() - entry.seenAt < SESSION_MAX_MS;
   return {
     async originFor(profileId) {
       const key = sessionKey(profileId);
       const entry = (await area.get(key))[key];
       if (!entry) return null;
-      if (typeof entry.origin === 'string' && now() - entry.seenAt < SESSION_MAX_MS) return entry.origin;
+      if (isLive(entry)) return entry.origin;
       await area.remove(key);
       return null;
+    },
+    /** The ids among `profileIds` with a console session that has not expired, in one read and without clean-up. */
+    async liveIds(profileIds) {
+      const items = await area.get(profileIds.map(sessionKey));
+      return new Set(profileIds.filter((id) => isLive(items[sessionKey(id)])));
     },
     async remember(profileId, origin) {
       if (typeof profileId !== 'string' || !profileId || !origin) return;

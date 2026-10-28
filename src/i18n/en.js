@@ -77,6 +77,8 @@ export default Object.freeze({
   'popup.thisTab': 'This tab',
   'popup.notInList': 'not in your list',
   'popup.current': 'current',
+  'popup.signedIn': 'signed in',
+  'popup.signedInHint': 'Opens straight in the console session it is signed in to',
   'popup.empty': 'No accounts yet.',
   'popup.addFirst': 'Add your first account',
   'popup.noMatch': 'No account matches.',

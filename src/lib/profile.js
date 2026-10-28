@@ -87,10 +87,10 @@ export function profileLabel(profile) {
   return profile.tag ? `${profile.tag} · ${profile.name}` : profile.name;
 }
 
-/** The second line of an account row: the sign-in method as the caller words it, the account ID and the group. */
-export function profileMeta(profile, providerText) {
+/** The second line of an account row: the sign-in method as the caller words it, the account ID and, unless a heading names it, the group. */
+export function profileMeta(profile, providerText, { withGroup = true } = {}) {
   const account = profileAccount(profile);
-  return [providerText, account && formatAccountId(account), profile.group].filter(Boolean).join(' · ');
+  return [providerText, account && formatAccountId(account), withGroup && profile.group].filter(Boolean).join(' · ');
 }
 
 /** The chosen color, else one derived from the group or the first word of the name, so a project shares a color. */

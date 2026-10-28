@@ -107,6 +107,7 @@ describe('labels', () => {
   test('the meta line joins whichever of method, account and group are set', () => {
     expect(profileMeta(account({ group: 'shop' }), 'IAM')).toBe('IAM · 1111-2222-3333 · shop');
     expect(profileMeta(account(), undefined)).toBe('1111-2222-3333');
+    expect(profileMeta(account({ group: 'shop' }), 'IAM', { withGroup: false })).toBe('IAM · 1111-2222-3333');
     expect(profileMeta(normalizeProfile({ name: 'x', provider: 'custom-url', fields: { url: 'https://idp.example.com' } }, { idFactory }), 'URL')).toBe('URL');
   });
 });

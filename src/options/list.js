@@ -18,9 +18,9 @@ function toolButton(label, action, { disabled = false, aria } = {}) {
   return button;
 }
 
-function metaLine(profile) {
+function metaLine(profile, headed) {
   const provider = getProvider(profile.provider);
-  return profileMeta(profile, provider && t(provider.label));
+  return profileMeta(profile, provider && t(provider.label), { withGroup: !headed });
 }
 
 function inlineControls(profile) {
@@ -55,7 +55,7 @@ export function createAccountList({ store, profiles, reload, onEdit, undo }) {
   const shownIds = () => shown.map((profile) => profile.id);
   const allIds = () => profiles().map((profile) => profile.id);
 
-  function profileRow(profile, { reorderable, first, last }) {
+  function profileRow(profile, { reorderable, first, last, headed }) {
     const row = element('li', profile.guarded ? 'profile guarded' : 'profile');
     row.dataset.id = profile.id;
     const pick = element('input', 'pick');
@@ -69,7 +69,7 @@ export function createAccountList({ store, profiles, reload, onEdit, undo }) {
     const dot = element('span', 'dot');
     dot.style.background = profileColor(profile);
     const main = element('div', 'main');
-    main.append(element('div', 'name', profile.name), element('div', 'meta', metaLine(profile)));
+    main.append(element('div', 'name', profile.name), element('div', 'meta', metaLine(profile, headed)));
     const tools = element('div', 'tools');
     tools.append(
       toolButton('↑', 'up', { disabled: !reorderable || first, aria: t('options.moveUp') }),
@@ -119,7 +119,7 @@ export function createAccountList({ store, profiles, reload, onEdit, undo }) {
     list.replaceChildren(...sections.flatMap((section) => [
       ...(headed ? [groupHead(section, all)] : []),
       ...section.profiles.map((profile, index) => profileRow(profile, {
-        reorderable, first: index === 0, last: index === section.profiles.length - 1,
+        reorderable, headed, first: index === 0, last: index === section.profiles.length - 1,
       })),
     ]));
     $('list-tools').hidden = all.length === 0;

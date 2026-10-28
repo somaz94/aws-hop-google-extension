@@ -14,6 +14,7 @@ Only what you enter on the options page or import:
 - custom sign-in URLs
 - your AWS Hop settings
 - which of your accounts you opened most recently (up to five, by their AWS Hop entry), unless you turn the recent list off
+- with the console's multi-session support, the address of the console session each of your accounts is open in (such as `https://111122223333-abcd1234.us-east-1.console.aws.amazon.com`), so the account opens straight in it
 
 AWS Hop never asks for, reads or stores passwords, access keys, session tokens or cookies.
 
@@ -21,13 +22,13 @@ AWS Hop never asks for, reads or stores passwords, access keys, session tokens o
 
 ## Where it is stored
 
-In `chrome.storage.sync`, except the recently opened list, which stays in `chrome.storage.local` on that one browser and is deleted when you turn the recent list off. Chrome keeps it in your browser profile and, if you are signed in to Chrome with sync turned on, syncs it to your other browsers through your Google account. AWS Hop has no server and makes no network requests.
+In `chrome.storage.sync`, except the recently opened list, which stays in `chrome.storage.local` on that one browser and is deleted when you turn the recent list off, and the session addresses, which stay in memory (`chrome.storage.session`) and are gone when the browser closes. Chrome keeps it in your browser profile and, if you are signed in to Chrome with sync turned on, syncs it to your other browsers through your Google account. AWS Hop has no server and makes no network requests.
 
 <br/>
 
 ## What the extension reads
 
-On `*.console.aws.amazon.com` pages, the account guard reads the account ID, account alias and role name that the console shows for the current session, to decide which label to draw. That information stays in the page; it is not stored or sent anywhere.
+On `*.console.aws.amazon.com` pages, the account guard reads the account ID, account alias and role name that the console shows for the current session, to decide which label to draw. That information stays in the page; it is not stored or sent anywhere. On a multi-session page, the guard tells the extension which of your accounts the page belongs to, and the extension keeps the page's address as described above.
 
 When you open the popup, it reads the address of the current tab to mark the account you are in.
 

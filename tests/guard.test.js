@@ -155,6 +155,22 @@ describe('startGuard', () => {
     expect(badges()).toEqual(['prod', null, 'prod', 'prod', null]);
   });
 
+  test('on a multi-session host, tells the worker which account the session belongs to', async () => {
+    const seen = () => runtime.sent.filter((message) => message.type === MSG.SESSION_SEEN).map((message) => message.profileId);
+    document.documentElement.setAttribute(NAV_ATTR, JSON.stringify({ loginDisplayNameAccount: '111122223333' }));
+    guard = await start({ hostname: '111122223333-abcd1234.us-east-1.console.aws.amazon.com' });
+    expect(seen()).toEqual(['prod']);
+    guard.stop();
+
+    guard = await start();
+    expect(seen()).toEqual(['prod']);
+    guard.stop();
+
+    document.documentElement.setAttribute(NAV_ATTR, JSON.stringify({ loginDisplayNameAccount: '999999999999' }));
+    guard = await start({ hostname: '999999999999-abcd1234.us-east-1.console.aws.amazon.com' });
+    expect(seen()).toEqual(['prod']);
+  });
+
   test('a missing worker or a reloaded extension does not break the guard', async () => {
     document.documentElement.setAttribute(NAV_ATTR, JSON.stringify({ loginDisplayNameAccount: '111122223333' }));
     guard = await start({ runtime: { ...runtime, sendMessage: () => Promise.reject(new Error('Receiving end does not exist.')) } });

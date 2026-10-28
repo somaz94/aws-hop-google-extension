@@ -379,6 +379,11 @@ async function run(cdp) {
 
   const host = await guardOn(cdp, 'https://777788889999-abcd1234.us-east-1.console.aws.amazon.com/console/home', 'test · data-sso');
   check('falls back to the multi-session host', [host.guard?.label, host.guard?.tooltip.includes('multi-session URL')], ['test · data-sso', true]);
+  const SESSION = 'https://777788889999-abcd1234.us-east-1.console.aws.amazon.com';
+  const remembered = await waitFor(() => options.eval(`Promise.all([chrome.storage.session.get(null), chrome.storage.sync.get(null)])
+    .then(([sessions, sync]) => Object.entries(sessions).map(([key, origin]) => sync['profile:' + key.slice('session:'.length)]?.name + ' ' + origin))
+    .then((entries) => (entries.length ? entries : null))`), 'the remembered session').catch(() => []);
+  check('remembers the console session each account is open in', remembered, [`data-sso ${SESSION}`]);
 
   const unknown = await guardOn(cdp, 'https://999999999999-zzzz9999.us-east-1.console.aws.amazon.com/', 'Account not in your list');
   check('marks an account that is not in the list', unknown.guard?.label, 'Account not in your list');
@@ -470,7 +475,7 @@ async function run(cdp) {
   const devColor = colorFor('shop').slice(1);
   await popupOpens(cdp, base, 'shop-dev', `https://signin.aws.amazon.com/switchrole?account=444455556666&roleName=Developer&displayName=shop-dev&color=${devColor}`);
   check('closes itself after opening an account', (await cdp.pageUrls()).filter((url) => url.endsWith('/popup/popup.html')).length, 1);
-  await popupOpens(cdp, base, 'data', 'https://example.awsapps.com/start/#/console?account_id=777788889999&role_name=ReadOnly');
+  await popupOpens(cdp, base, 'data', `${SESSION}/console/home`);
   await popupOpens(cdp, base, 'shop-prod', 'https://111122223333.signin.aws.amazon.com/console');
   const recentNames = await options.eval(`Promise.all([chrome.storage.local.get('recentProfiles'), chrome.storage.sync.get(null)])
     .then(([local, sync]) => (local.recentProfiles ?? []).map((id) => sync['profile:' + id].name))`);

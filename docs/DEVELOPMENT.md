@@ -30,7 +30,7 @@ Plain ES modules, loaded straight from `src/` with no bundler. Each directory ha
 | Directory | Role |
 |---|---|
 | `src/providers/` | One module per sign-in method, plus the registry in `index.js` |
-| `src/lib/` | The account model, tags and colors, storage, console account detection, matching and search. No UI and no Chrome API other than storage |
+| `src/lib/` | The account model, tags and colors, storage, console account detection, matching, search and remembered console sessions. No UI and no Chrome API other than storage |
 | `src/importers/` | Parsers that turn `~/.aws/config`, an aws-extend-switch-roles configuration or JSON into accounts, de-duplication and merging, and the account ID command for each terminal (one `CLI_SHELLS` entry per terminal) |
 | `src/i18n/` | One message catalog per language, the lookup function and the DOM helper that fills `data-i18n` attributes |
 | `_locales/` | Chrome's own catalogs, for the few manifest strings Chrome shows itself |
@@ -53,6 +53,8 @@ Content scripts declared in the manifest cannot be ES modules, and the guard nee
 1. `nav-bridge.js` runs in the page's **main** world, reads the console navigation's account info and writes a few string fields to the `data-aws-hop-nav` attribute on `<html>`
 2. `loader.js` runs in the **isolated** world and imports `guard.js` from the extension through `chrome.runtime.getURL`
 3. `guard.js` detects the account (`src/lib/identity.js`), matches it to an account (`src/lib/match.js`) and draws the guard in a shadow root (`banner.js`)
+
+On a multi-session host the guard also reports which account the page belongs to (`MSG.SESSION_SEEN`, the account only); the worker takes the session's origin from `sender.url`, never from the message, and keeps it in `chrome.storage.session` for `openUrlFor` in the popup and the address bar.
 
 The guard also sends its toolbar badge to the service worker (`MSG.SET_BADGE`) whenever what it shows changes, and an empty one on stop. The worker sets it for the sending tab only and clears it when the tab starts loading a new page; `tabs.onUpdated` reports that status without the `tabs` permission, so the badge adds none.
 

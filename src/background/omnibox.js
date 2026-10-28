@@ -1,6 +1,6 @@
 import { resolveLanguage, setLanguage, t } from '../i18n/index.js';
-import { buildProfileUrl } from '../lib/profile.js';
 import { filterProfiles, resolveOpenTarget } from '../lib/search.js';
+import { openUrlFor } from '../lib/sessions.js';
 
 export const SUGGEST_MAX = 6;
 
@@ -40,7 +40,7 @@ export function omniboxSuggestions(profiles, text, limit = SUGGEST_MAX) {
   }));
 }
 
-export function createOmnibox({ store, recent, tabs, omnibox, uiLanguage }) {
+export function createOmnibox({ store, recent, sessions, tabs, omnibox, uiLanguage }) {
   async function load() {
     const [profiles, settings] = await Promise.all([store.loadProfiles(), store.loadSettings()]);
     setLanguage(resolveLanguage(settings.language, uiLanguage));
@@ -60,7 +60,7 @@ export function createOmnibox({ store, recent, tabs, omnibox, uiLanguage }) {
       const { profile } = resolveOmnibox(profiles, text, settings);
       if (!profile) return;
       if (settings.showRecent) await recent.record(profile.id);
-      const url = buildProfileUrl(profile);
+      const url = await openUrlFor(profile, sessions);
       if (disposition === 'currentTab' && resolveOpenTarget(settings.openIn, false) === 'current-tab') await tabs.update({ url });
       else await tabs.create({ url, active: disposition !== 'newBackgroundTab' });
     },

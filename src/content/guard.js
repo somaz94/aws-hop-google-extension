@@ -1,7 +1,7 @@
 import { resolveLanguage, setLanguage, t } from '../i18n/index.js';
 import { formatAccountId } from '../lib/account.js';
 import { readableTextColor } from '../lib/color.js';
-import { detectIdentity } from '../lib/identity.js';
+import { detectIdentity, identityFromHost } from '../lib/identity.js';
 import { matchProfile } from '../lib/match.js';
 import { MSG } from '../lib/messages.js';
 import { profileColor } from '../lib/profile.js';
@@ -71,14 +71,16 @@ export async function startGuard({
   let lastView;
   let badge = null;
 
-  const sendBadge = () => {
+  const send = (message) => {
     // Rejects when the worker is not listening, and throws once the extension was reloaded under this page.
     try {
-      runtime?.sendMessage?.({ type: MSG.SET_BADGE, badge })?.catch(() => {});
+      runtime?.sendMessage?.(message)?.catch(() => {});
     } catch {
       // Nothing left to tell.
     }
   };
+  const sendBadge = () => send({ type: MSG.SET_BADGE, badge });
+  const onSessionHost = Boolean(identityFromHost(hostname));
 
   const update = () => {
     const identity = detectIdentity({ hostname, navInfo: readNavInfo(doc), doc });
@@ -92,6 +94,8 @@ export async function startGuard({
     title.set(view?.titlePrefix ?? null);
     badge = buildBadge(view, profile);
     sendBadge();
+    // The worker reads the session's address from the sender, so only the account is sent.
+    if (profile && onSessionHost) send({ type: MSG.SESSION_SEEN, profileId: profile.id });
   };
 
   update();

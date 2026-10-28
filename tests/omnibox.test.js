@@ -3,6 +3,7 @@ import { createOmnibox, defaultDescription, omniboxSuggestions, resolveOmnibox, 
 import { setLanguage } from '../src/i18n/index.js';
 import { normalizeProfile } from '../src/lib/profile.js';
 import { createRecentStore, RECENT_KEY } from '../src/lib/recent.js';
+import { createSessionStore } from '../src/lib/sessions.js';
 import { createStore, DEFAULT_SETTINGS } from '../src/lib/store.js';
 import { createFakeStorage } from './helpers/fakeStorage.js';
 
@@ -75,14 +76,16 @@ describe('createOmnibox', () => {
     const calls = [];
     const tabs = { update: async (props) => calls.push(['update', props]), create: async (props) => calls.push(['create', props]) };
     const defaults = [];
+    const sessions = createSessionStore({ area: createFakeStorage({}, 'session').area });
     const omnibox = createOmnibox({
       store,
       recent: createRecentStore({ area: local.area }),
+      sessions,
       tabs,
       omnibox: { setDefaultSuggestion: (suggestion) => defaults.push(suggestion.description) },
       uiLanguage: 'en-US',
     });
-    return { omnibox, calls, defaults, local };
+    return { omnibox, calls, defaults, local, sessions };
   }
   const PROD_URL = 'https://111122223333.signin.aws.amazon.com/console';
 
@@ -111,6 +114,13 @@ describe('createOmnibox', () => {
     await omnibox.onInputEntered('shop-prod', 'newForegroundTab');
     await omnibox.onInputEntered('shop-prod', 'newBackgroundTab');
     expect(calls).toEqual([['create', { url: PROD_URL, active: true }], ['create', { url: PROD_URL, active: false }]]);
+  });
+
+  test('goes straight into the account\'s open console session', async () => {
+    const { omnibox, calls, sessions } = await setup();
+    await sessions.remember('prod', 'https://111122223333-abcd1234.eu-central-1.console.aws.amazon.com');
+    await omnibox.onInputEntered('shop-prod', 'currentTab');
+    expect(calls).toEqual([['create', { url: 'https://111122223333-abcd1234.eu-central-1.console.aws.amazon.com/console/home', active: true }]]);
   });
 
   test('opens nothing when nothing may be opened', async () => {

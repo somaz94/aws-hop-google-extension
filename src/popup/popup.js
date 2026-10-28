@@ -5,14 +5,16 @@ import { readableTextColor } from '../lib/color.js';
 import { identityFromHost } from '../lib/identity.js';
 import { matchProfile } from '../lib/match.js';
 import { MSG } from '../lib/messages.js';
-import { buildProfileUrl, profileAccount, profileColor } from '../lib/profile.js';
+import { profileAccount, profileColor } from '../lib/profile.js';
 import { createRecentStore, recentProfiles } from '../lib/recent.js';
+import { createSessionStore, openUrlFor } from '../lib/sessions.js';
 import { moveSelection, needsConfirmation, popupSections, resolveOpenTarget } from '../lib/search.js';
 import { createStore } from '../lib/store.js';
 import { getProvider } from '../providers/index.js';
 
 const store = createStore();
 const recentStore = createRecentStore();
+const sessionStore = createSessionStore();
 const $ = (id) => document.getElementById(id);
 
 const ui = {
@@ -142,7 +144,7 @@ async function open(profile, invert) {
   }
   // Before the tab opens: a new active tab closes the popup and would cut the write short.
   if (settings.showRecent) await recentStore.record(profile.id);
-  const url = buildProfileUrl(profile);
+  const url = await openUrlFor(profile, sessionStore);
   if (resolveOpenTarget(settings.openIn, invert) === 'current-tab') await chrome.tabs.update({ url });
   else await chrome.tabs.create({ url });
   window.close();

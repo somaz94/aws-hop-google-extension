@@ -1,11 +1,16 @@
 import { createRecentStore } from '../lib/recent.js';
 import { MSG } from '../lib/messages.js';
+import { createSessionStore, sessionOrigin } from '../lib/sessions.js';
 import { createStore } from '../lib/store.js';
 import { applyBadge } from './badge.js';
 import { createOmnibox } from './omnibox.js';
 
+const sessions = createSessionStore();
+
 chrome.runtime.onMessage.addListener((message, sender) => {
-  if (message?.type === MSG.SET_BADGE && sender.tab) applyBadge(chrome.action, sender.tab.id, message.badge);
+  if (!sender.tab) return false;
+  if (message?.type === MSG.SET_BADGE) applyBadge(chrome.action, sender.tab.id, message.badge);
+  if (message?.type === MSG.SESSION_SEEN) sessions.remember(message.profileId, sessionOrigin(sender.url));
   return false;
 });
 
@@ -17,6 +22,7 @@ chrome.tabs.onUpdated.addListener((tabId, { status }) => {
 const omnibox = createOmnibox({
   store: createStore(),
   recent: createRecentStore(),
+  sessions,
   tabs: chrome.tabs,
   omnibox: chrome.omnibox,
   uiLanguage: chrome.i18n.getUILanguage(),

@@ -62,7 +62,9 @@ export default Object.freeze({
   'import.preview.dropped': '전체 바꾸기를 하면 지워지는 계정: {names}',
 
   'guard.unregistered': '목록에 없는 계정',
-  'guard.tooltip': 'AWS Hop: {label} ({account}). {source}에서 감지했습니다. 클릭하면 접힙니다.',
+  'guard.tooltip': 'AWS Hop: {label} ({account}). {source}에서 감지했습니다. 클릭하면 다른 계정으로 전환할 수 있습니다.',
+  'guard.menu.label': '계정 전환',
+  'guard.menu.collapse': '점으로 접기',
   'guard.source.nav': '콘솔 내비게이션 정보',
   'guard.source.dom': '페이지 헤더',
   'guard.source.host': '멀티 세션 URL',

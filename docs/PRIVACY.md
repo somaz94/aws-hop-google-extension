@@ -28,7 +28,7 @@ In `chrome.storage.sync`, except the recently opened list, which stays in `chrom
 
 ## What the extension reads
 
-On `*.console.aws.amazon.com` pages, the account guard reads the account ID, account alias and role name that the console shows for the current session, to decide which label to draw. That information stays in the page; it is not stored or sent anywhere. On a multi-session page, the guard tells the extension which of your accounts the page belongs to, and the extension keeps the page's address as described above.
+On `*.console.aws.amazon.com` pages, the account guard reads the account ID, account alias and role name that the console shows for the current session, to decide which label to draw. That information stays in the page; it is not stored or sent anywhere. On a multi-session page, the guard tells the extension which of your accounts the page belongs to, and the extension keeps the page's address as described above. When you click the guard's label, your account names are drawn in a menu on the console page until you close it.
 
 When you open the popup, it reads the address of the current tab to mark the account you are in.
 

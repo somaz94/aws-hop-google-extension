@@ -10,6 +10,7 @@ import { createStore, DEFAULT_SETTINGS } from '../src/lib/store.js';
 import { readableTextColor } from '../src/lib/color.js';
 import { normalizeProfile, profileColor } from '../src/lib/profile.js';
 import { PROTECTED_COLOR } from '../src/lib/tag.js';
+import { createRecentStore } from '../src/lib/recent.js';
 import { createFakeRuntime, createFakeStorage } from './helpers/fakeStorage.js';
 
 const prod = normalizeProfile({ id: 'prod', name: 'shop-prod', provider: 'iam-user', tag: 'prod', guarded: true, fields: { account: '111122223333' } });
@@ -33,7 +34,7 @@ describe('buildView', () => {
       textColor: readableTextColor(profileColor(prod)),
       label: 'prod · shop-prod',
       account: '1111-2222-3333',
-      tooltip: 'AWS Hop: prod · shop-prod (1111-2222-3333), detected from the console navigation. Click to minimize.',
+      tooltip: 'AWS Hop: prod · shop-prod (1111-2222-3333), detected from the console navigation. Click to switch accounts.',
       frame: true,
       muted: false,
       position: 'bottom-left',
@@ -57,7 +58,7 @@ describe('buildView', () => {
     setLanguage('ko');
     expect(buildView(identity('999999999999', 'host'), null, DEFAULT_SETTINGS)).toMatchObject({
       label: '목록에 없는 계정',
-      tooltip: 'AWS Hop: 목록에 없는 계정 (9999-9999-9999). 멀티 세션 URL에서 감지했습니다. 클릭하면 접힙니다.',
+      tooltip: 'AWS Hop: 목록에 없는 계정 (9999-9999-9999). 멀티 세션 URL에서 감지했습니다. 클릭하면 다른 계정으로 전환할 수 있습니다.',
     });
   });
 });
@@ -169,6 +170,56 @@ describe('startGuard', () => {
     document.documentElement.setAttribute(NAV_ATTR, JSON.stringify({ loginDisplayNameAccount: '999999999999' }));
     guard = await start({ hostname: '999999999999-abcd1234.us-east-1.console.aws.amazon.com' });
     expect(seen()).toEqual(['prod']);
+  });
+
+  test('the label opens an account menu that asks the worker to open the pick', async () => {
+    const menu = () => pill()?.getRootNode().querySelector('.menu') ?? null;
+    const names = () => [...menu().querySelectorAll('.name')].map((n) => n.textContent);
+    document.documentElement.setAttribute(NAV_ATTR, JSON.stringify({ loginDisplayNameAccount: '111122223333' }));
+    guard = await start({ recent: createRecentStore({ area: createFakeStorage({ recentProfiles: ['dev'] }, 'local').area }) });
+    pill().click();
+    await wait(0);
+    expect(names()).toEqual(['prod · shop-prod', 'shop-dev']);
+    expect(menu().querySelectorAll('.meta')[0].textContent).toBe('current');
+
+    await store.saveProfile(normalizeProfile({ id: 'qa', name: 'shop-qa', provider: 'iam-user', fields: { account: '444455556666' } }));
+    await wait(0);
+    expect(names()).toEqual(['prod · shop-prod', 'shop-dev', 'shop-qa']);
+
+    menu().querySelectorAll('.row')[1].click();
+    expect(menu()).toBeNull();
+    expect(runtime.sent.filter((m) => m.type === MSG.OPEN_PROFILE)).toEqual([{ type: MSG.OPEN_PROFILE, profileId: 'dev', invert: false }]);
+
+    pill().click();
+    await wait(0);
+    pill().click();
+    await wait(0);
+    expect(menu()).toBeNull();
+
+    pill().click();
+    await wait(0);
+    menu().querySelector('.collapse').click();
+    expect([menu(), pill().classList.contains('collapsed')]).toEqual([null, true]);
+  });
+
+  test('the menu goes when the guard does, and a recent list that fails to load is skipped', async () => {
+    const failing = { load: () => Promise.reject(new Error('Extension context invalidated.')) };
+    document.documentElement.setAttribute(NAV_ATTR, JSON.stringify({ loginDisplayNameAccount: '111122223333' }));
+    guard = await start({ recent: failing });
+    pill().click();
+    await wait(0);
+    expect(pill().getRootNode().querySelector('.menu')).not.toBeNull();
+    await store.saveSettings({ ...DEFAULT_SETTINGS, guardEnabled: false });
+    await wait(0);
+    expect(document.querySelector(HOST_TAG)).toBeNull();
+
+    await store.saveSettings({ ...DEFAULT_SETTINGS, showRecent: false });
+    await wait(0);
+    pill().click();
+    await wait(0);
+    guard.stop();
+    guard = null;
+    expect(document.querySelector(HOST_TAG)).toBeNull();
   });
 
   test('a missing worker or a reloaded extension does not break the guard', async () => {

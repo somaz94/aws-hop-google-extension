@@ -25,6 +25,7 @@ Account guard
 - The toolbar icon shows the tab's tag as a badge, on red for protected accounts
 - The label sits in the lower left or lower right corner, your choice
 - Accounts you have not added get a gray label, and the popup offers to add them
+- Click the label to switch to another account right from the console page
 
 Your accounts, your labels
 - Free-form tags (prod, qa, a project name), a color per project and a protected flag
@@ -87,7 +88,7 @@ When the user opens the popup, it reads the address of the current tab and asks 
 Host permission (`https://*.console.aws.amazon.com/*`)
 
 ```text
-The content script runs only on AWS console pages. It reads the account ID, account alias and role name that the console shows for the current session and draws a colored stripe and label, plus a red frame for accounts the user marked as protected, so the user can tell which account a tab is in before changing anything. That information stays in the page; it is not stored or sent anywhere. On a multi-session console page the script tells the extension which of the user's accounts the page belongs to, and the extension keeps that page's address in memory as described under storage.
+The content script runs only on AWS console pages. It reads the account ID, account alias and role name that the console shows for the current session and draws a colored stripe and label, plus a red frame for accounts the user marked as protected, so the user can tell which account a tab is in before changing anything. That information stays in the page; it is not stored or sent anywhere. On a multi-session console page the script tells the extension which of the user's accounts the page belongs to, and the extension keeps that page's address in memory as described under storage. When the user clicks the label, the script lists the user's own accounts in a menu on the page until it closes, and asks the extension to open the one picked.
 ```
 
 ### Remote code

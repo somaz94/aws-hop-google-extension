@@ -28,7 +28,7 @@ const STYLE = `
 .pill.collapsed span { display: none; }
 `;
 
-function build(doc, host) {
+function build(doc, host, onActivate) {
   const root = host.attachShadow({ mode: 'open' });
   const style = doc.createElement('style');
   style.textContent = STYLE;
@@ -44,13 +44,17 @@ function build(doc, host) {
   const account = doc.createElement('span');
   account.className = 'account';
   pill.append(label, account);
-  pill.addEventListener('click', () => pill.classList.toggle('collapsed'));
+  // A dot only expands back; otherwise the label opens the account menu, or collapses when there is none.
+  pill.addEventListener('click', (event) => {
+    if (pill.classList.contains('collapsed') || !onActivate) pill.classList.toggle('collapsed');
+    else onActivate(event);
+  });
   root.append(style, stripe, frame, pill);
   return root;
 }
 
 /** Draws, updates or (with a null view) removes the guard. Profile names go through textContent only. */
-export function renderGuard(doc, view) {
+export function renderGuard(doc, view, { onActivate } = {}) {
   let host = doc.querySelector(HOST_TAG);
   if (!view) {
     host?.remove();
@@ -58,7 +62,7 @@ export function renderGuard(doc, view) {
   }
   if (!host) {
     host = doc.createElement(HOST_TAG);
-    build(doc, host);
+    build(doc, host, onActivate);
     doc.documentElement.appendChild(host);
   }
   const root = host.shadowRoot;
@@ -72,6 +76,11 @@ export function renderGuard(doc, view) {
   pill.title = view.tooltip;
   root.querySelector('.label').textContent = view.label;
   root.querySelector('.account').textContent = view.account;
+}
+
+/** Shrinks the label to a dot; clicking the dot brings it back. */
+export function collapseGuard(doc) {
+  doc.querySelector(HOST_TAG)?.shadowRoot.querySelector('.pill').classList.add('collapsed');
 }
 
 /** Keeps `prefix` at the start of the tab title while the console's single-page app rewrites it. */

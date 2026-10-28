@@ -367,7 +367,7 @@ async function run(cdp) {
   check('reads ConsoleNavService from the main world, late', prod.guard, {
     label: 'prod · shop-prod',
     frame: true,
-    tooltip: 'AWS Hop: prod · shop-prod (1111-2222-3333), detected from the console navigation. Click to minimize.',
+    tooltip: 'AWS Hop: prod · shop-prod (1111-2222-3333), detected from the console navigation. Click to switch accounts.',
     title: '[shop-prod] Console Home',
   });
   check('the bridge wrote only the account fields', await prod.page.eval(`document.documentElement.getAttribute('data-aws-hop-nav')`),
@@ -458,6 +458,19 @@ async function run(cdp) {
   await choose(options, 'setting-guardPosition', 'bottom-left');
   check('and back', await waitFor(async () => ((await prod.page.eval(pillSide)) === 'left' ? 'left' : null), 'the label to move back').catch(() => prod.page.eval(pillSide)), 'left');
 
+  const menuRows = await dom.page.eval(`(async () => {
+    const root = document.querySelector('aws-hop-guard').shadowRoot;
+    root.querySelector('.pill').click();
+    for (let i = 0; i < 40 && !root.querySelector('.menu'); i += 1) await new Promise((r) => setTimeout(r, 50));
+    return [...root.querySelectorAll('.menu .row')].map((row) => [row.querySelector('.name').textContent, row.querySelector('.meta').textContent].filter(Boolean).join(' / '));
+  })()`);
+  check('the console label opens an account menu', menuRows, ['prod · shop-prod', 'qa · shop-dev / current', 'test · data-sso']);
+  const prodSignin = 'https://111122223333.signin.aws.amazon.com/console';
+  const prodSignins = async () => (await cdp.pageUrls()).filter((url) => url === prodSignin).length;
+  const signinsBefore = await prodSignins();
+  await dom.page.eval(`document.querySelector('aws-hop-guard').shadowRoot.querySelector('.menu .row').click()`);
+  check('and the worker opens the pick in a new tab', await waitFor(async () => ((await prodSignins()) > signinsBefore ? true : null), 'the picked account').catch(() => false), true);
+
   console.log('Add this account');
   const deepLink = await cdp.open(`${base}/options/options.html#add=999999999999`);
   const prefilled = await waitFor(() => deepLink.eval(`document.getElementById('editor').open && ({
@@ -511,7 +524,7 @@ async function run(cdp) {
   await choose(options, 'setting-language', 'ko');
   check('the options page switches without a reload', await waitFor(() => options.eval(`document.querySelector('[data-i18n="options.accounts"]').textContent === '계정' && document.title`), 'Korean options').catch(() => null), 'AWS Hop 설정');
   const koGuard = await waitFor(async () => ((await unknown.page.eval(GUARD))?.label === '목록에 없는 계정' ? unknown.page.eval(GUARD) : null), 'the Korean guard').catch(() => null);
-  check('open console tabs switch too', koGuard?.tooltip, 'AWS Hop: 목록에 없는 계정 (9999-9999-9999). 멀티 세션 URL에서 감지했습니다. 클릭하면 접힙니다.');
+  check('open console tabs switch too', koGuard?.tooltip, 'AWS Hop: 목록에 없는 계정 (9999-9999-9999). 멀티 세션 URL에서 감지했습니다. 클릭하면 다른 계정으로 전환할 수 있습니다.');
   const koPopup = await cdp.open(`${base}/popup/popup.html`);
   check('the popup opens in Korean', await waitFor(() => koPopup.eval(`document.getElementById('search').placeholder === '계정 검색' && document.documentElement.lang`), 'Korean popup').catch(() => null), 'ko');
 

@@ -54,7 +54,8 @@ The tag and the protected flag can be changed straight from the account list in 
 
 On every `*.console.aws.amazon.com` page, AWS Hop looks up the account you are in and draws:
 
-- a stripe across the top and a label in the lower left (or lower right, in the settings), in the account's color (click the label to shrink it to a dot; hover it to see where the account was detected from)
+- a stripe across the top and a label in the lower left (or lower right, in the settings), in the account's color (hover it to see where the account was detected from)
+- an account menu when you click that label: type to filter, then Enter or a click opens the account the way the popup does, in its own session when one is open; **–** shrinks the label to a dot, and clicking the dot brings it back
 - for protected accounts, a red frame around the whole page and the account name in front of the tab title, such as `[shop-prod] EC2`
 - for accounts that are not in your list, a gray label (can be turned off). The popup then offers **Add**, which opens the add dialog with the account ID filled in
 - a badge on the toolbar icon while that tab is active: the account's tag, or the start of its name without one, in its color, on red for protected accounts and `?` for accounts not in your list

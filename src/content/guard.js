@@ -5,9 +5,11 @@ import { detectIdentity, identityFromHost } from '../lib/identity.js';
 import { matchProfile } from '../lib/match.js';
 import { MSG } from '../lib/messages.js';
 import { profileColor } from '../lib/profile.js';
+import { createRecentStore, recentProfiles } from '../lib/recent.js';
 import { createStore } from '../lib/store.js';
 import { PROTECTED_COLOR } from '../lib/tag.js';
-import { createTitleKeeper, renderGuard } from './banner.js';
+import { collapseGuard, createTitleKeeper, HOST_TAG, renderGuard } from './banner.js';
+import { createMenu } from './menu.js';
 
 // Written by nav-bridge.js in the page's main world; the two names must match.
 export const NAV_ATTR = 'data-aws-hop-nav';
@@ -60,6 +62,7 @@ export async function startGuard({
   doc = globalThis.document,
   hostname = globalThis.location?.hostname,
   store = createStore(),
+  recent = createRecentStore(),
   runtime = globalThis.chrome?.runtime,
   uiLanguage = globalThis.chrome?.i18n?.getUILanguage?.(),
   observeMs = OBSERVE_MS,
@@ -82,15 +85,45 @@ export async function startGuard({
   const sendBadge = () => send({ type: MSG.SET_BADGE, badge });
   const onSessionHost = Boolean(identityFromHost(hostname));
 
+  let menu = null;
+  let recentIds = [];
+  const menuData = () => ({
+    profiles,
+    settings,
+    currentId: state.profile?.id ?? null,
+    recent: settings.showRecent ? recentProfiles(profiles, recentIds) : [],
+    side: settings.guardPosition === 'bottom-right' ? 'right' : 'left',
+  });
+  const onActivate = async () => {
+    try {
+      if (!menu?.isOpen) recentIds = settings.showRecent ? await recent.load() : [];
+    } catch {
+      recentIds = [];
+    }
+    const root = doc.querySelector(HOST_TAG)?.shadowRoot;
+    if (!root) return;
+    menu ??= createMenu(root, {
+      // The worker opens it, so the session it is signed in to and the open-in setting apply as in the popup.
+      onOpen: (profileId, invert) => send({ type: MSG.OPEN_PROFILE, profileId, invert }),
+      onCollapse: () => collapseGuard(doc),
+    });
+    menu.toggle(menuData());
+  };
+
   const update = () => {
     const identity = detectIdentity({ hostname, navInfo: readNavInfo(doc), doc });
     const profile = matchProfile(profiles, identity);
     state = { identity, profile };
+    menu?.refresh(menuData());
     const view = buildView(identity, profile, settings);
     const key = JSON.stringify(view);
     if (key === lastView) return;
     lastView = key;
-    renderGuard(doc, view);
+    if (!view) {
+      menu?.close();
+      menu = null;
+    }
+    renderGuard(doc, view, { onActivate });
     title.set(view?.titlePrefix ?? null);
     badge = buildBadge(view, profile);
     sendBadge();
@@ -147,6 +180,7 @@ export async function startGuard({
       doc.defaultView.removeEventListener('pageshow', onPageShow);
       badge = null;
       sendBadge();
+      menu?.close();
       title.set(null);
       title.stop();
       renderGuard(doc, null);

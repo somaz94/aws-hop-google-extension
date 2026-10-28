@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 import { describe, test, expect, beforeEach } from '@jest/globals';
-import { createTitleKeeper, HOST_TAG, renderGuard } from '../src/content/banner.js';
+import { collapseGuard, createTitleKeeper, HOST_TAG, renderGuard } from '../src/content/banner.js';
 
 const view = (overrides = {}) => ({
   color: '#0073bb', textColor: '#ffffff', label: 'prod · shop', account: '1111-2222-3333',
@@ -54,7 +54,21 @@ describe('renderGuard', () => {
     expect(document.querySelector(HOST_TAG)).toBeNull();
   });
 
-  test('clicking the pill collapses and restores it', () => {
+  test('with a menu, a click opens it; a dot made by collapseGuard only expands back', () => {
+    const clicks = [];
+    renderGuard(document, view(), { onActivate: () => clicks.push('menu') });
+    const pill = root().querySelector('.pill');
+    pill.click();
+    expect(clicks).toEqual(['menu']);
+    collapseGuard(document);
+    expect(pill.classList.contains('collapsed')).toBe(true);
+    pill.click();
+    expect([pill.classList.contains('collapsed'), clicks]).toEqual([false, ['menu']]);
+    renderGuard(document, null);
+    collapseGuard(document);
+  });
+
+  test('without a menu, clicking the pill collapses and restores it', () => {
     renderGuard(document, view());
     const pill = root().querySelector('.pill');
     pill.click();

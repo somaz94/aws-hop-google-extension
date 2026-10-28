@@ -63,7 +63,9 @@ export default Object.freeze({
   'import.preview.dropped': 'Replacing all accounts also removes: {names}',
 
   'guard.unregistered': 'Account not in your list',
-  'guard.tooltip': 'AWS Hop: {label} ({account}), detected from the {source}. Click to minimize.',
+  'guard.tooltip': 'AWS Hop: {label} ({account}), detected from the {source}. Click to switch accounts.',
+  'guard.menu.label': 'Switch account',
+  'guard.menu.collapse': 'Shrink to a dot',
   'guard.source.nav': 'console navigation',
   'guard.source.dom': 'page header',
   'guard.source.host': 'multi-session URL',

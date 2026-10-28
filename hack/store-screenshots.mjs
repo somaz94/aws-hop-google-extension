@@ -32,6 +32,7 @@ function chromeBinary() {
   return /^chrome@\S+ (.+)$/m.exec(out)[1].trim();
 }
 
+const SEND_TIMEOUT = 20000;
 const work = mkdtempSync(join(tmpdir(), 'aws-hop-store-'));
 const chrome = spawn(chromeBinary(), [
   '--headless=new', `--user-data-dir=${join(work, 'profile')}`, '--remote-debugging-port=0',
@@ -53,16 +54,23 @@ try {
   const pending = new Map();
   ws.addEventListener('message', (event) => {
     const message = JSON.parse(event.data);
-    if (!message.id) return;
-    const { resolve, reject } = pending.get(message.id);
+    const call = message.id && pending.get(message.id);
+    if (!call) return;
     pending.delete(message.id);
-    if (message.error) reject(new Error(message.error.message));
-    else resolve(message.result);
+    clearTimeout(call.timer);
+    if (message.error) call.reject(new Error(message.error.message));
+    else call.resolve(message.result);
   });
+  // A Chrome that stops answering fails the run instead of hanging it; the slowest call takes a few seconds.
   const send = (method, params = {}, sessionId = undefined) => new Promise((resolve, reject) => {
     nextId += 1;
-    pending.set(nextId, { resolve, reject });
-    ws.send(JSON.stringify({ id: nextId, method, params, sessionId }));
+    const id = nextId;
+    const timer = setTimeout(() => {
+      pending.delete(id);
+      reject(new Error(`${method}: no answer in ${SEND_TIMEOUT} ms`));
+    }, SEND_TIMEOUT);
+    pending.set(id, { resolve, reject, timer });
+    ws.send(JSON.stringify({ id, method, params, sessionId }));
   });
 
   async function open(url, width, height, scale) {

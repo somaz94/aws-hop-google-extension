@@ -30,6 +30,8 @@ AWS documents `account` and `roleName` for the Switch Role page; `displayName` a
 
 With the console's [multi-session support](https://docs.aws.amazon.com/awsconsolehelpdocs/latest/gsg/multisession.html) turned on you can stay signed in to up to five identities at once; keep opening accounts in a new tab, the default, to use it.
 
+AWS Hop does not choose a Region: none of these addresses carries one, so the console opens in the Region AWS picks for you. To pin it, set **Default Region** in the console's Unified Settings. For IAM Identity Center, a console page in the destination field, such as `https://ap-northeast-2.console.aws.amazon.com/ec2/home?region=ap-northeast-2`, also sets the Region.
+
 <br/>
 
 ## Tags, groups and protected accounts
@@ -69,7 +71,11 @@ When several of your accounts share an account ID (an IAM user and a role in the
 
 ## Installation
 
-AWS Hop is not on the Chrome Web Store yet. To install it from source:
+### From Chrome Web Store
+1. Visit [AWS Hop](https://chromewebstore.google.com/detail/aws-hop/ifdkceilmpdbnpongohnpbnkoipjapli)
+2. Click **Add to Chrome**
+
+### From Source
 
 ```bash
 git clone https://github.com/somaz94/aws-hop-google-extension.git

@@ -1,0 +1,8 @@
+{
+  "extDescription": {
+    "message": "클릭 한 번으로 AWS 콘솔 계정을 전환합니다. IAM 사용자, Switch Role, IAM Identity Center, SAML을 지원하고 운영 계정은 빨간 테두리로 표시합니다."
+  },
+  "commandOpen": {
+    "message": "AWS Hop 열기"
+  }
+}

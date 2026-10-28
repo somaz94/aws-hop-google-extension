@@ -1,0 +1,8 @@
+{
+  "extDescription": {
+    "message": "Switch AWS console accounts in one click: IAM users, Switch Role, IAM Identity Center and SAML, with a production guard."
+  },
+  "commandOpen": {
+    "message": "Open AWS Hop"
+  }
+}

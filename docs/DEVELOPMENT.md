@@ -33,6 +33,7 @@ Plain ES modules, loaded straight from `src/` with no bundler. Each directory ha
 | `src/lib/` | The account model, tags and colors, storage, console account detection, matching and search. No UI and no Chrome API other than storage |
 | `src/importers/` | Parsers that turn `~/.aws/config`, an aws-extend-switch-roles configuration or JSON into accounts, de-duplication and merging, and the account ID command for each terminal (one `CLI_SHELLS` entry per terminal) |
 | `src/i18n/` | One message catalog per language, the lookup function and the DOM helper that fills `data-i18n` attributes |
+| `_locales/` | Chrome's own catalogs, for the few manifest strings Chrome shows itself |
 | `src/content/` | The account guard on console pages |
 | `src/popup/`, `src/options/` | The two extension pages; thin glue over `src/lib` |
 
@@ -112,9 +113,9 @@ Every piece of text the user sees comes from `t(key, params)` in `src/i18n/index
 - Static text in the HTML pages carries `data-i18n` (and `data-i18n-placeholder`, `-title`, `-aria-label` for attributes); `applyTranslations` fills it. The English text written inside the element is only a fallback
 - The language is the `language` setting: `auto` follows `chrome.i18n.getUILanguage()`, anything without a catalog falls back to English. Every page and the guard switch as soon as the setting changes
 - `tests/i18n.test.js` fails when a catalog is missing a key, or when a translation drops a placeholder or a code span
-- To add a language, add a catalog with every key, register it in `CATALOGS` and add an option to the language select on the options page
+- To add a language, add a catalog with every key, register it in `CATALOGS`, add an option to the language select on the options page and add `_locales/<language>/messages.json`
 
-Badge text such as provider `short` names stays the same in every language. The manifest name and description are English only, because localizing them needs a `_locales/` directory that the release packaging does not ship yet.
+Badge text such as provider `short` names stays the same in every language. Chrome, not `t()`, shows the manifest description and the shortcut name, so those come from `_locales/<language>/messages.json` through `__MSG_…__`; the extension name stays `AWS Hop` everywhere. `tests/manifest.test.js` checks that every language has the same keys, that the description fits the store's 132 characters, and that both `make package` and the release workflow ship `_locales/`.
 
 <br/>
 

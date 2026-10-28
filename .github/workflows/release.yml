@@ -52,6 +52,7 @@ jobs:
           mkdir -p dist
           zip -r dist/aws-hop-${{ github.ref_name }}.zip \
             manifest.json \
+            _locales/ \
             src/ \
             icons/ \
             LICENSE \

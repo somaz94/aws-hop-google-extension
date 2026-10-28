@@ -25,7 +25,7 @@ lint-fix: ## Run ESLint with auto-fix
 
 package: clean ## Package the extension into a ZIP for the Chrome Web Store
 	@mkdir -p dist
-	zip -r $(PACKAGE) manifest.json src/ icons/ LICENSE README.md -x "*.DS_Store"
+	zip -r $(PACKAGE) manifest.json _locales/ src/ icons/ LICENSE README.md -x "*.DS_Store"
 	@echo ""
 	@echo "  ✓ $(PACKAGE) created"
 	@ls -lh $(PACKAGE)

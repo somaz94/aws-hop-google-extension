@@ -1,12 +1,15 @@
 import { describe, test, expect } from '@jest/globals';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, posix, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { LANGUAGES } from '../src/i18n/index.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (path) => readFileSync(join(ROOT, path), 'utf8');
 const manifest = JSON.parse(read('manifest.json'));
 const pkg = JSON.parse(read('package.json'));
+const LOCALES = readdirSync(join(ROOT, '_locales')).sort();
+const messages = (locale) => JSON.parse(read(`_locales/${locale}/messages.json`));
 
 const globToRegExp = (glob) => new RegExp(`^${glob.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*')}$`);
 
@@ -30,8 +33,29 @@ describe('manifest', () => {
     expect(manifest.version).toBe(pkg.version);
   });
 
-  test('description fits the Chrome Web Store limit', () => {
-    expect(manifest.description.length).toBeLessThanOrEqual(132);
+  test('description fits the Chrome Web Store limit in every language', () => {
+    const [, key] = manifest.description.match(/^__MSG_(\w+)__$/);
+    for (const locale of LOCALES) expect({ locale, length: [...messages(locale)[key].message].length <= 132 }).toEqual({ locale, length: true });
+  });
+
+  test('localized strings default to English and cover the same languages, with the same non-empty keys', () => {
+    expect(manifest.default_locale).toBe('en');
+    expect(LOCALES).toEqual([...LANGUAGES].sort());
+    const keys = Object.keys(messages('en')).sort();
+    for (const locale of LOCALES) {
+      expect(Object.keys(messages(locale)).sort()).toEqual(keys);
+      for (const { message } of Object.values(messages(locale))) expect(message.trim()).not.toBe('');
+    }
+  });
+
+  test('every __MSG_ key in the manifest exists, and every key is used', () => {
+    const used = [...JSON.stringify(manifest).matchAll(/__MSG_(\w+)__/g)].map(([, key]) => key).sort();
+    expect(used).toEqual(Object.keys(messages('en')).sort());
+  });
+
+  test('both packaging paths ship _locales', () => {
+    expect(read('Makefile')).toMatch(/zip -r \$\(PACKAGE\) manifest\.json _locales\//);
+    expect(read('.github/workflows/release.yml')).toMatch(/manifest\.json \\\n\s+_locales\/ \\/);
   });
 
   test('every referenced file exists', () => {

@@ -1,13 +1,15 @@
 import { richText } from '../i18n/dom.js';
 import { t } from '../i18n/index.js';
 import { accountFromHash } from '../lib/messages.js';
-import { buildProfileUrl, fieldValues, FIELD_PREFIX, GROUP_MAX, NAME_MAX, normalizeProfile, profileColor, validateProfile } from '../lib/profile.js';
+import {
+  buildProfileUrl, fieldValues, FIELD_PREFIX, GROUP_MAX, NAME_MAX, normalizeProfile, profileColor, sameTargetAs, validateProfile,
+} from '../lib/profile.js';
 import { TAG_MAX } from '../lib/tag.js';
 import { carryFields, draftForAccount, getProvider, listProviders } from '../providers/index.js';
 import { $, element, option } from './dom.js';
 
 /** The add and edit dialog. */
-export function createEditor({ store, reload }) {
+export function createEditor({ store, profiles, reload }) {
   const dialog = $('editor');
   const form = $('editor-form');
   const providerFields = $('provider-fields');
@@ -72,7 +74,12 @@ export function createEditor({ store, reload }) {
     const profile = readForm();
     form.elements.color.disabled = form.elements.autoColor.checked;
     if (form.elements.autoColor.checked) form.elements.color.value = profileColor(profile);
-    $('url-preview').textContent = validateProfile(profile).length ? '—' : buildProfileUrl(profile);
+    const valid = !validateProfile(profile).length;
+    $('url-preview').textContent = valid ? buildProfileUrl(profile) : '—';
+    // A warning, not an error: Duplicate starts from the same sign-in on purpose.
+    const twin = valid ? sameTargetAs(profiles(), profile) : null;
+    $('duplicate-note').hidden = !twin;
+    $('duplicate-note').textContent = twin ? t('editor.duplicateOf', { name: twin.name }) : '';
   }
 
   function open(profile = null) {

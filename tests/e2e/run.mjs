@@ -570,6 +570,16 @@ async function run(cdp) {
   await searchList('');
   check('and lists everything again once cleared', [await rowNames(), await options.eval(`document.getElementById('reorder-hint').hidden`)], [['shop-prod', 'shop-dev', 'data-sso'], true]);
 
+  const twinNote = await options.eval(`(async () => {
+    document.querySelector('.profile [data-action="duplicate"]').click();
+    const note = document.getElementById('duplicate-note');
+    for (let i = 0; i < 20 && note.hidden; i += 1) await new Promise((r) => setTimeout(r, 50));
+    const text = note.hidden ? null : note.textContent;
+    document.getElementById('editor-cancel').click();
+    return text;
+  })()`);
+  check('the editor warns when an account signs in to the same place as one in the list', twinNote, 'Signs in to the same place as "shop-prod", which is already in your list.');
+
   // Synthetic drag events: CDP's own drag input needs real coordinates on a visible page, and this checks the same handlers.
   const drag = (from, to, after) => options.eval(`(() => {
     const rows = [...document.querySelectorAll('.profile')];

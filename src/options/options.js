@@ -22,7 +22,7 @@ async function reload() {
   importExport.renderPreview();
 }
 
-const editor = createEditor({ store, reload });
+const editor = createEditor({ store, profiles: currentProfiles, reload });
 const accounts = createAccountList({ store, profiles: currentProfiles, reload, onEdit: editor.open });
 attachBulkBar({ store, reload, selection: accounts });
 const importExport = createImportExport({ store, profiles: currentProfiles, reload });

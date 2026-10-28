@@ -1,6 +1,6 @@
 import { describe, test, expect } from '@jest/globals';
 import {
-  buildProfileUrl, fieldValues, GROUP_MAX, NAME_MAX, normalizeProfile, profileAccount, profileColor, profileLabel, profileMeta, profileRoles, profileTarget, validateProfile,
+  buildProfileUrl, fieldValues, GROUP_MAX, NAME_MAX, normalizeProfile, profileAccount, profileColor, profileLabel, profileMeta, profileRoles, profileTarget, sameTargetAs, validateProfile,
 } from '../src/lib/profile.js';
 import { colorFor, TAG_MAX } from '../src/lib/tag.js';
 
@@ -73,6 +73,20 @@ describe('validateProfile', () => {
     expect(validateProfile(normalizeProfile({ ...valid, fields: {} }, { idFactory }))).toEqual([
       { field: 'account', message: 'Account ID or alias is required' },
     ]);
+  });
+});
+
+describe('sameTargetAs', () => {
+  const iam = (id, name, account) => normalizeProfile({ id, name, provider: 'iam-user', fields: { account } });
+  const list = [iam('a', 'shop-prod', '111122223333'), iam('b', 'shop-dev', '444455556666')];
+
+  test('finds another account that signs in to the same place, whatever its name', () => {
+    expect(sameTargetAs(list, iam('new', 'other', '1111-2222-3333'))?.name).toBe('shop-prod');
+  });
+
+  test('an account is not its own duplicate, and a new place has none', () => {
+    expect(sameTargetAs(list, list[0])).toBeNull();
+    expect(sameTargetAs(list, iam('new', 'x', '999999999999'))).toBeNull();
   });
 });
 

@@ -120,6 +120,12 @@ export function profileRoles(profile) {
   return provider?.roleOf ? provider.roleOf(profile.fields, { name: profile.name }) : [];
 }
 
+/** Another profile in `profiles` that signs in to the same place as `profile`, or null. */
+export function sameTargetAs(profiles, profile) {
+  const target = profileTarget(profile);
+  return profiles.find((other) => other.id !== profile.id && profileTarget(other) === target) ?? null;
+}
+
 /** Equal for profiles that sign in to the same place; names, tags and colors do not count. */
 export function profileTarget(profile) {
   const provider = getProvider(profile.provider);

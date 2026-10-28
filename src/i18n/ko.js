@@ -185,5 +185,6 @@ export default Object.freeze({
   'editor.cancel': '취소',
   'editor.save': '저장',
   'editor.optional': '{label} (선택)',
+  'editor.duplicateOf': '이미 목록에 있는 "{name}" 계정과 같은 곳에 로그인합니다.',
   'editor.saveFailed': '저장하지 못했습니다: {detail}',
 });

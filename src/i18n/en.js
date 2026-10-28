@@ -187,4 +187,5 @@ export default Object.freeze({
   'editor.save': 'Save',
   'editor.optional': '{label} (optional)',
   'editor.saveFailed': 'Could not save: {detail}',
+  'editor.duplicateOf': 'Signs in to the same place as "{name}", which is already in your list.',
 });

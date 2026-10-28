@@ -35,7 +35,7 @@ Plain ES modules, loaded straight from `src/` with no bundler. Each directory ha
 | `src/i18n/` | One message catalog per language, the lookup function and the DOM helper that fills `data-i18n` attributes |
 | `_locales/` | Chrome's own catalogs, for the few manifest strings Chrome shows itself |
 | `src/content/` | The account guard on console pages |
-| `src/background/` | The service worker, which puts each console tab's badge on the toolbar icon |
+| `src/background/` | The service worker: each console tab's badge on the toolbar icon, and the `aws` address bar keyword |
 | `src/popup/`, `src/options/` | The two extension pages; thin glue over `src/lib` |
 
 A stored account has a fixed set of common fields (`name`, `provider`, `tag`, `guarded`, `color`, `group`) and a `fields` object whose keys are defined by its sign-in method. `normalizeProfile` drops keys the method does not declare, so nothing a method does not ask for is ever stored, and it reads the `env` field that older versions stored as a tag. The store normalizes every account it loads, so the pages never see an older shape.

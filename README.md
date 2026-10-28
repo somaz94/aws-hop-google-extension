@@ -9,6 +9,7 @@ It never stores a password, an access key or a session token. Every sign-in stil
 ## Features
 
 - **One popup for every account**: type to filter, arrow keys and Enter to open, accounts grouped by project, the ones you opened last at the top
+- **Address bar**: type `aws`, a space and part of an account name to open it without the popup
 - **Four sign-in methods**: IAM user sign-in, Switch Role, IAM Identity Center and any custom URL, each a self-contained module, so a new method is one file
 - **Your own labels**: a free-form tag per account (`prod`, `qa`, a project name, whatever fits), a color shared by each project, and a protected flag for accounts where a mistake is costly
 - **Account guard**: a colored stripe and label on every console page and a badge on the toolbar icon, plus a red frame and a tab-title prefix for protected accounts
@@ -53,7 +54,7 @@ The tag and the protected flag can be changed straight from the account list in 
 
 On every `*.console.aws.amazon.com` page, AWS Hop looks up the account you are in and draws:
 
-- a stripe across the top and a label in the lower left, in the account's color (click the label to shrink it to a dot; hover it to see where the account was detected from)
+- a stripe across the top and a label in the lower left (or lower right, in the settings), in the account's color (click the label to shrink it to a dot; hover it to see where the account was detected from)
 - for protected accounts, a red frame around the whole page and the account name in front of the tab title, such as `[shop-prod] EC2`
 - for accounts that are not in your list, a gray label (can be turned off). The popup then offers **Add**, which opens the add dialog with the account ID filled in
 - a badge on the toolbar icon while that tab is active: the account's tag, or the start of its name without one, in its color, on red for protected accounts and `?` for accounts not in your list
@@ -96,6 +97,8 @@ git clone https://github.com/somaz94/aws-hop-google-extension.git
 4. Type to filter, then press Enter or click
 
 Once the list is longer than five accounts, the popup starts with the ones you opened most recently on this browser; turn it off in the settings, which also forgets the list. Another setting makes a protected account wait for a second Enter or click before it opens.
+
+From the address bar, type `aws`, a space and part of a name, tag or account ID: Enter opens the first suggestion, or pick another. Alt+Enter always opens a new tab. With the second-Enter setting on, a protected account opens from the address bar only by its full name or by picking it from the suggestions.
 
 The popup opens accounts in a new tab by default. Shift, Ctrl or Cmd with Enter or a click, or a middle click, opens in the other place; the default can be switched in the options. The language setting offers the browser language, English or Korean.
 

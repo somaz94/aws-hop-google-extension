@@ -36,6 +36,7 @@ describe('buildView', () => {
       tooltip: 'AWS Hop: prod · shop-prod (1111-2222-3333), detected from the console navigation. Click to minimize.',
       frame: true,
       muted: false,
+      position: 'bottom-left',
       titlePrefix: '[shop-prod] ',
     });
     expect(buildView(identity('111122223333'), prod, { ...DEFAULT_SETTINGS, guardTitlePrefix: false }).titlePrefix).toBeNull();

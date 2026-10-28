@@ -409,6 +409,18 @@ async function run(cdp) {
   check('turning it back on restores it', back?.title, '[shop-prod] Console Home');
   check('badges included', await badgesBecome('? prod! qa! test'), '? prod! qa! test');
 
+  const pillSide = `(() => {
+    const pill = document.querySelector('aws-hop-guard')?.shadowRoot.querySelector('.pill');
+    if (!pill) return null;
+    const { left, right } = pill.getBoundingClientRect();
+    return (left + right) / 2 > innerWidth / 2 ? 'right' : 'left';
+  })()`;
+  await choose(options, 'setting-guardPosition', 'bottom-right');
+  check('the account label moves to the bottom right from the settings',
+    await waitFor(async () => ((await prod.page.eval(pillSide)) === 'right' ? 'right' : null), 'the label to move').catch(() => prod.page.eval(pillSide)), 'right');
+  await choose(options, 'setting-guardPosition', 'bottom-left');
+  check('and back', await waitFor(async () => ((await prod.page.eval(pillSide)) === 'left' ? 'left' : null), 'the label to move back').catch(() => prod.page.eval(pillSide)), 'left');
+
   console.log('Add this account');
   const deepLink = await cdp.open(`${base}/options/options.html#add=999999999999`);
   const prefilled = await waitFor(() => deepLink.eval(`document.getElementById('editor').open && ({

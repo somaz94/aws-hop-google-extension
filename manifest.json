@@ -26,6 +26,9 @@
     "service_worker": "src/background/worker.js",
     "type": "module"
   },
+  "omnibox": {
+    "keyword": "aws"
+  },
   "commands": {
     "_execute_action": {
       "suggested_key": {

@@ -23,11 +23,13 @@ Account guard
 - A colored stripe and label on every AWS console page, showing which account and role the tab is in
 - Protected accounts get a red frame and their name in front of the tab title
 - The toolbar icon shows the tab's tag as a badge, on red for protected accounts
+- The label sits in the lower left or lower right corner, your choice
 - Accounts you have not added get a gray label, and the popup offers to add them
 
 Your accounts, your labels
 - Free-form tags (prod, qa, a project name), a color per project and a protected flag
 - Type to filter in the popup, then arrow keys and Enter; Alt+Shift+A opens it. Recently opened accounts come first, and protected accounts can be set to need a second Enter
+- Or skip the popup: type aws and an account name in the address bar
 - Import from ~/.aws/config, one entry per account however many profiles point at it, from an aws-extend-switch-roles configuration, or from a JSON export
 - A ready-to-copy command for macOS, Windows (PowerShell) and Linux that looks up the account ID of every AWS CLI profile
 - Accounts sync across your Chrome browsers

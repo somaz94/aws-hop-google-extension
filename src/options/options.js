@@ -382,7 +382,7 @@ $('export').addEventListener('click', () => {
 
 /* ---------- settings and language ---------- */
 
-const SETTING_INPUTS = ['language', 'openIn', 'showRecent', 'confirmGuarded', 'guardEnabled', 'guardShowUnregistered', 'guardTitlePrefix'];
+const SETTING_INPUTS = ['language', 'openIn', 'showRecent', 'confirmGuarded', 'guardEnabled', 'guardShowUnregistered', 'guardTitlePrefix', 'guardPosition'];
 
 function applyLanguage(settings) {
   setLanguage(resolveLanguage(settings.language, chrome.i18n.getUILanguage()));

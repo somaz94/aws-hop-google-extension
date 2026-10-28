@@ -40,6 +40,13 @@ describe('renderGuard', () => {
     expect(root().querySelector('.pill').classList.contains('muted')).toBe(true);
   });
 
+  test('moves the label to the right corner and back', () => {
+    renderGuard(document, view({ position: 'bottom-right' }));
+    expect(root().querySelector('.pill').classList.contains('right')).toBe(true);
+    renderGuard(document, view({ position: 'bottom-left' }));
+    expect(root().querySelector('.pill').classList.contains('right')).toBe(false);
+  });
+
   test('a null view removes it, and removing twice is harmless', () => {
     renderGuard(document, view());
     renderGuard(document, null);

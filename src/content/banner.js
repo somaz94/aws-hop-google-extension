@@ -21,6 +21,7 @@ const STYLE = `
   font: 600 12px/1.4 ${FONT}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   background: var(--color); color: var(--text); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
+.pill.right { left: auto; right: 12px; }
 .pill .account { font-weight: 400; opacity: 0.85; }
 .pill.muted { opacity: 0.75; }
 .pill.collapsed { width: 14px; height: 14px; padding: 0; }
@@ -67,6 +68,7 @@ export function renderGuard(doc, view) {
   root.querySelector('.frame').hidden = !view.frame;
   const pill = root.querySelector('.pill');
   pill.classList.toggle('muted', view.muted);
+  pill.classList.toggle('right', view.position === 'bottom-right');
   pill.title = view.tooltip;
   root.querySelector('.label').textContent = view.label;
   root.querySelector('.account').textContent = view.account;

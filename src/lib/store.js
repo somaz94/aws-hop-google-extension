@@ -14,9 +14,11 @@ export const DEFAULT_SETTINGS = Object.freeze({
   guardTitlePrefix: true,
   showRecent: true,
   confirmGuarded: false,
+  guardPosition: 'bottom-left',
 });
 
 export const OPEN_IN = Object.freeze(['new-tab', 'current-tab']);
+export const GUARD_POSITIONS = Object.freeze(['bottom-left', 'bottom-right']);
 
 const profileKey = (id) => `${PROFILE_PREFIX}${id}`;
 
@@ -25,6 +27,7 @@ export function normalizeSettings(raw) {
   if (!raw || typeof raw !== 'object') return settings;
   if (LANGUAGE_SETTINGS.includes(raw.language)) settings.language = raw.language;
   if (OPEN_IN.includes(raw.openIn)) settings.openIn = raw.openIn;
+  if (GUARD_POSITIONS.includes(raw.guardPosition)) settings.guardPosition = raw.guardPosition;
   for (const key of ['guardEnabled', 'guardShowUnregistered', 'guardTitlePrefix', 'showRecent', 'confirmGuarded']) {
     if (typeof raw[key] === 'boolean') settings[key] = raw[key];
   }

@@ -42,6 +42,7 @@ export function buildView(identity, profile, settings) {
     tooltip: t('guard.tooltip', { label, account, source }),
     frame: Boolean(profile?.guarded),
     muted: !profile,
+    position: settings.guardPosition,
     // The account name, not the tag: with several production accounts open, `[prod]` would not tell the tabs apart.
     titlePrefix: profile?.guarded && settings.guardTitlePrefix ? `[${profile.name}] ` : null,
   };

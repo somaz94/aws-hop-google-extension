@@ -6,6 +6,7 @@
   --line: #d1d5db;
   --accent: #0972d3;
   --danger: #d13212;
+  --protected: #d13212;
   color-scheme: light;
 }
 
@@ -202,7 +203,7 @@ dialog {
 
 dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
 
-.profile.guarded { box-shadow: inset 3px 0 0 #d13212; }
+.profile.guarded { box-shadow: inset 3px 0 0 var(--protected); }
 .profile .tag-input { flex: none; width: 96px; padding: 3px 6px; font-size: 12px; }
 
 .inline-check {
@@ -300,5 +301,5 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
 .profile.dragging { opacity: 0.4; }
 .profile.drop-before { box-shadow: inset 0 2px 0 var(--accent); }
 .profile.drop-after { box-shadow: inset 0 -2px 0 var(--accent); }
-.profile.guarded.drop-before { box-shadow: inset 3px 0 0 #d13212, inset 0 2px 0 var(--accent); }
-.profile.guarded.drop-after { box-shadow: inset 3px 0 0 #d13212, inset 0 -2px 0 var(--accent); }
+.profile.guarded.drop-before { box-shadow: inset 3px 0 0 var(--protected), inset 0 2px 0 var(--accent); }
+.profile.guarded.drop-after { box-shadow: inset 3px 0 0 var(--protected), inset 0 -2px 0 var(--accent); }

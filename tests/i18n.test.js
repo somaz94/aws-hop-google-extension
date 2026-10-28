@@ -5,7 +5,7 @@ import { describe, test, expect, afterEach } from '@jest/globals';
 import en from '../src/i18n/en.js';
 import ko from '../src/i18n/ko.js';
 import {
-  catalog, DEFAULT_LANGUAGE, formatList, getLanguage, LANGUAGE_SETTINGS, LANGUAGES, resolveLanguage, setLanguage, t, translations,
+  applyLanguageSetting, catalog, DEFAULT_LANGUAGE, formatList, getLanguage, LANGUAGE_SETTINGS, LANGUAGES, resolveLanguage, setLanguage, t, translations,
 } from '../src/i18n/index.js';
 import { applyTranslations, richText } from '../src/i18n/dom.js';
 
@@ -48,6 +48,12 @@ describe('language selection', () => {
     [undefined, 'ko_KR', 'ko'],
   ])('setting %p with browser %p → %p', (setting, ui, expected) => {
     expect(resolveLanguage(setting, ui)).toBe(expected);
+  });
+
+  test('applyLanguageSetting switches to what the settings ask for', () => {
+    expect(applyLanguageSetting({ language: 'auto' }, 'ko-KR')).toBe('ko');
+    expect(applyLanguageSetting({ language: 'en' }, 'ko-KR')).toBe('en');
+    expect(getLanguage()).toBe('en');
   });
 
   test('an unknown language falls back to the default', () => {

@@ -1,10 +1,10 @@
-import { resolveLanguage, setLanguage, t } from '../i18n/index.js';
+import { applyLanguageSetting, t } from '../i18n/index.js';
 import { formatAccountId } from '../lib/account.js';
 import { readableTextColor } from '../lib/color.js';
 import { detectIdentity, identityFromHost } from '../lib/identity.js';
 import { matchProfile } from '../lib/match.js';
 import { MSG } from '../lib/messages.js';
-import { profileColor } from '../lib/profile.js';
+import { profileColor, profileLabel } from '../lib/profile.js';
 import { createRecentStore, recentProfiles } from '../lib/recent.js';
 import { createStore } from '../lib/store.js';
 import { PROTECTED_COLOR } from '../lib/tag.js';
@@ -35,7 +35,7 @@ export function buildView(identity, profile, settings) {
   const source = t(`guard.source.${identity.source}`);
   const color = profile ? profileColor(profile) : UNREGISTERED_COLOR;
   if (!profile && !settings.guardShowUnregistered) return null;
-  const label = !profile ? t('guard.unregistered') : profile.tag ? `${profile.tag} · ${profile.name}` : profile.name;
+  const label = !profile ? t('guard.unregistered') : profileLabel(profile);
   return {
     color,
     textColor: readableTextColor(color),
@@ -68,7 +68,7 @@ export async function startGuard({
   observeMs = OBSERVE_MS,
 } = {}) {
   let [profiles, settings] = await Promise.all([store.loadProfiles(), store.loadSettings()]);
-  setLanguage(resolveLanguage(settings.language, uiLanguage));
+  applyLanguageSetting(settings, uiLanguage);
   const title = createTitleKeeper(doc);
   let state = { identity: null, profile: null };
   let lastView;
@@ -148,7 +148,7 @@ export async function startGuard({
     if (changed.profiles) profiles = await store.loadProfiles();
     if (changed.settings) {
       settings = await store.loadSettings();
-      setLanguage(resolveLanguage(settings.language, uiLanguage));
+      applyLanguageSetting(settings, uiLanguage);
     }
     update();
   });

@@ -1,9 +1,8 @@
 import { t } from '../i18n/index.js';
 import { formatAccountId } from '../lib/account.js';
-import { profileAccount, profileColor } from '../lib/profile.js';
+import { profileAccount, profileColor, profileLabel } from '../lib/profile.js';
 import { filterProfiles, moveSelection, needsConfirmation } from '../lib/search.js';
-
-const FONT = `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`;
+import { FONT } from './banner.js';
 
 const STYLE = `
 .menu {
@@ -31,7 +30,6 @@ const STYLE = `
 `;
 
 const inverted = (event) => event.shiftKey || event.metaKey || event.ctrlKey || event.button === 1;
-const display = (profile) => (profile.tag ? `${profile.tag} · ${profile.name}` : profile.name);
 
 /** Recently opened accounts first, then the rest in the user's order; one ranked list while searching. */
 export function menuProfiles(profiles, { query = '', recent = [] } = {}) {
@@ -64,11 +62,11 @@ export function createMenu(root, { onOpen, onCollapse }) {
     profiles.forEach((profile, index) => {
       const row = doc.createElement('li');
       row.className = ['row', index === selected && 'selected', profile.id === confirmingId && 'confirming'].filter(Boolean).join(' ');
-      row.title = [display(profile), formatAccountId(profileAccount(profile) ?? '')].filter(Boolean).join(' · ');
+      row.title = [profileLabel(profile), formatAccountId(profileAccount(profile) ?? '')].filter(Boolean).join(' · ');
       const dot = doc.createElement('span');
       dot.className = 'dot';
       dot.style.background = profileColor(profile);
-      const name = Object.assign(doc.createElement('span'), { className: 'name', textContent: display(profile) });
+      const name = Object.assign(doc.createElement('span'), { className: 'name', textContent: profileLabel(profile) });
       let meta = '';
       if (profile.id === confirmingId) meta = t('popup.confirmOpen');
       else if (profile.id === data.currentId) meta = t('popup.current');

@@ -1,11 +1,11 @@
 import { applyTranslations } from '../i18n/dom.js';
-import { resolveLanguage, setLanguage, t } from '../i18n/index.js';
+import { applyLanguageSetting, t } from '../i18n/index.js';
 import { formatAccountId } from '../lib/account.js';
 import { readableTextColor } from '../lib/color.js';
 import { identityFromHost } from '../lib/identity.js';
 import { matchProfile } from '../lib/match.js';
 import { MSG } from '../lib/messages.js';
-import { profileAccount, profileColor } from '../lib/profile.js';
+import { profileColor, profileLabel, profileMeta } from '../lib/profile.js';
 import { createRecentStore, recentProfiles } from '../lib/recent.js';
 import { createSessionStore, openUrlFor } from '../lib/sessions.js';
 import { moveSelection, needsConfirmation, popupSections, resolveOpenTarget } from '../lib/search.js';
@@ -41,10 +41,7 @@ function element(tag, className, text) {
   return node;
 }
 
-function metaLine(profile) {
-  const account = profileAccount(profile);
-  return [getProvider(profile.provider)?.short, account && formatAccountId(account), profile.group].filter(Boolean).join(' · ');
-}
+const metaLine = (profile) => profileMeta(profile, getProvider(profile.provider)?.short);
 
 function renderRow(profile, index) {
   const color = profileColor(profile);
@@ -107,7 +104,7 @@ function renderCurrent(identity) {
   const account = formatAccountId(identity.accounts[0]);
   ui.current.replaceChildren(`${t('popup.thisTab')}: `);
   if (profile) {
-    ui.current.append(element('strong', '', profile.tag ? `${profile.tag} · ${profile.name}` : profile.name), ` (${account})`);
+    ui.current.append(element('strong', '', profileLabel(profile)), ` (${account})`);
   } else {
     ui.current.append(element('strong', '', account), ` (${t('popup.notInList')}) `);
     const add = element('button', 'link-btn', t('popup.addThis'));
@@ -197,7 +194,7 @@ $('add-first').addEventListener('click', () => chrome.runtime.openOptionsPage())
 async function init() {
   [profiles, settings, recentIds] = await Promise.all([store.loadProfiles(), store.loadSettings(), recentStore.load()]);
   createThemer(document).apply(settings.theme);
-  setLanguage(resolveLanguage(settings.language, chrome.i18n.getUILanguage()));
+  applyLanguageSetting(settings, chrome.i18n.getUILanguage());
   applyTranslations(document);
   render();
   ui.search.focus();

@@ -16,6 +16,11 @@ export function resolveLanguage(setting, uiLanguage) {
   return LANGUAGES.includes(base) ? base : DEFAULT_LANGUAGE;
 }
 
+/** Switches to the language a settings object asks for; returns the language in use. */
+export function applyLanguageSetting(settings, uiLanguage) {
+  return setLanguage(resolveLanguage(settings.language, uiLanguage));
+}
+
 export function setLanguage(language) {
   current = LANGUAGES.includes(language) ? language : DEFAULT_LANGUAGE;
   return current;

@@ -2,7 +2,7 @@ import { PROTECTED_COLOR } from '../lib/tag.js';
 
 export const HOST_TAG = 'aws-hop-guard';
 
-const FONT = `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`;
+export const FONT = `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`;
 
 const STYLE = `
 :host { all: initial; }

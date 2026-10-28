@@ -7,6 +7,7 @@
   --selected: #e8f2fc;
   --accent: #0972d3;
   --danger: #d13212;
+  --protected: #d13212;
   --input-bg: #ffffff;
   color-scheme: light;
 }
@@ -119,7 +120,7 @@ body {
 }
 
 .row:hover { background: var(--hover); }
-.row.guarded { box-shadow: inset 3px 0 0 #d13212; }
+.row.guarded { box-shadow: inset 3px 0 0 var(--protected); }
 .row[aria-selected="true"] { background: var(--selected); }
 .row.confirming .meta { color: var(--danger); font-weight: 600; }
 

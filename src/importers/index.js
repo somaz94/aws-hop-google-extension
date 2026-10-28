@@ -11,8 +11,6 @@ const PARSERS = Object.freeze({
   aesr: { parse: profilesFromAesr, dedupe: true },
 });
 
-export const IMPORT_FORMATS = Object.freeze(Object.keys(PARSERS));
-
 /**
  * `{` is always JSON; `[` is JSON only if it parses, since `[profile x]` also opens an INI file.
  * An INI file is an aws-extend-switch-roles config when it uses that extension's own keys.

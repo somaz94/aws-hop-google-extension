@@ -1,12 +1,11 @@
 import { applyTranslations, richText } from '../i18n/dom.js';
-import { resolveLanguage, setLanguage, t } from '../i18n/index.js';
-import { formatAccountId } from '../lib/account.js';
+import { applyLanguageSetting, t } from '../i18n/index.js';
 import { bulkEdit, keepSelected, moveBy, moveNextTo, selectionState, selectRange } from '../lib/listEdit.js';
-import { buildProfileUrl, normalizeProfile, profileAccount, profileColor, validateProfile } from '../lib/profile.js';
+import { buildProfileUrl, GROUP_MAX, NAME_MAX, normalizeProfile, profileColor, profileMeta, validateProfile } from '../lib/profile.js';
 import { createRecentStore } from '../lib/recent.js';
 import { filterProfiles } from '../lib/search.js';
-import { createStore } from '../lib/store.js';
-import { SUGGESTED_TAGS } from '../lib/tag.js';
+import { createStore, DEFAULT_SETTINGS } from '../lib/store.js';
+import { SUGGESTED_TAGS, TAG_MAX } from '../lib/tag.js';
 import { createThemer } from '../lib/theme.js';
 import { accountIdCommand, CLI_SHELLS, getShell, shellForPlatform } from '../importers/accountIdCommand.js';
 import { exportProfiles } from '../importers/json.js';
@@ -20,6 +19,11 @@ const $ = (id) => document.getElementById(id);
 const editor = $('editor');
 const form = $('editor-form');
 const providerFields = $('provider-fields');
+
+// The limits validateProfile enforces, so no input can hold more than a profile accepts.
+for (const [input, max] of [[form.elements.name, NAME_MAX], [form.elements.tag, TAG_MAX], [form.elements.group, GROUP_MAX], [$('bulk-tag'), TAG_MAX], [$('bulk-group'), GROUP_MAX]]) {
+  input.maxLength = max;
+}
 
 let profiles = [];
 let editingId = null;
@@ -55,9 +59,8 @@ const shownIds = () => shown.map((profile) => profile.id);
 const allIds = () => profiles.map((profile) => profile.id);
 
 function metaLine(profile) {
-  const account = profileAccount(profile);
   const provider = getProvider(profile.provider);
-  return [provider && t(provider.label), account && formatAccountId(account), profile.group].filter(Boolean).join(' · ');
+  return profileMeta(profile, provider && t(provider.label));
 }
 
 function toolButton(label, action, { disabled = false, aria } = {}) {
@@ -72,7 +75,7 @@ function toolButton(label, action, { disabled = false, aria } = {}) {
 function inlineControls(profile) {
   const tag = element('input', 'tag-input');
   tag.value = profile.tag;
-  tag.maxLength = 20;
+  tag.maxLength = TAG_MAX;
   tag.placeholder = t('editor.tag');
   tag.setAttribute('list', 'tag-suggestions');
   tag.setAttribute('aria-label', t('options.tagOf', { name: profile.name }));
@@ -629,11 +632,12 @@ $('export').addEventListener('click', () => {
 
 /* ---------- settings and language ---------- */
 
-const SETTING_INPUTS = ['language', 'theme', 'openIn', 'showRecent', 'confirmGuarded', 'guardEnabled', 'guardShowUnregistered', 'guardTitlePrefix', 'guardPosition'];
+// Every setting has an input with the id setting-<key>.
+const SETTING_INPUTS = Object.keys(DEFAULT_SETTINGS);
 
 function applyLanguage(settings) {
   themer.apply(settings.theme);
-  setLanguage(resolveLanguage(settings.language, chrome.i18n.getUILanguage()));
+  applyLanguageSetting(settings, chrome.i18n.getUILanguage());
   applyTranslations(document);
   fillProviderSelect();
   renderCliHelper();

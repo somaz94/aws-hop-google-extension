@@ -1,6 +1,6 @@
 import { describe, test, expect } from '@jest/globals';
 import {
-  buildProfileUrl, GROUP_MAX, NAME_MAX, normalizeProfile, profileAccount, profileColor, profileRoles, profileTarget, validateProfile,
+  buildProfileUrl, GROUP_MAX, NAME_MAX, normalizeProfile, profileAccount, profileColor, profileLabel, profileMeta, profileRoles, profileTarget, validateProfile,
 } from '../src/lib/profile.js';
 import { colorFor, TAG_MAX } from '../src/lib/tag.js';
 
@@ -73,6 +73,21 @@ describe('validateProfile', () => {
     expect(validateProfile(normalizeProfile({ ...valid, fields: {} }, { idFactory }))).toEqual([
       { field: 'account', message: 'Account ID or alias is required' },
     ]);
+  });
+});
+
+describe('labels', () => {
+  const account = (extra) => normalizeProfile({ name: 'shop-prod', provider: 'iam-user', fields: { account: '111122223333' }, ...extra }, { idFactory });
+
+  test('the tag goes in front of the name when there is one', () => {
+    expect(profileLabel(account({ tag: 'prod' }))).toBe('prod · shop-prod');
+    expect(profileLabel(account())).toBe('shop-prod');
+  });
+
+  test('the meta line joins whichever of method, account and group are set', () => {
+    expect(profileMeta(account({ group: 'shop' }), 'IAM')).toBe('IAM · 1111-2222-3333 · shop');
+    expect(profileMeta(account(), undefined)).toBe('1111-2222-3333');
+    expect(profileMeta(normalizeProfile({ name: 'x', provider: 'custom-url', fields: { url: 'https://idp.example.com' } }, { idFactory }), 'URL')).toBe('URL');
   });
 });
 

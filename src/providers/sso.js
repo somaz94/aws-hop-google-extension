@@ -3,7 +3,7 @@ import { t } from '../i18n/index.js';
 import { accountIdField, httpsUrlError } from './fields.js';
 
 // awsapps.com: classic portal (incl. GovCloud), app.aws: dual-stack portal, awsapps.cn: China.
-export const PORTAL_HOST_SUFFIXES = ['.awsapps.com', '.app.aws', '.awsapps.cn'];
+export const PORTAL_HOST_SUFFIXES = Object.freeze(['.awsapps.com', '.app.aws', '.awsapps.cn']);
 const PERMISSION_SET = /^[\w+=,.@-]{1,32}$/;
 
 /** Drops any `#/...` fragment and trailing slashes so the console path can be appended. */

@@ -21,18 +21,17 @@ export const DEFAULT_SETTINGS = Object.freeze({
 
 export const OPEN_IN = Object.freeze(['new-tab', 'current-tab']);
 export const GUARD_POSITIONS = Object.freeze(['bottom-left', 'bottom-right']);
+// The allowed values of every setting that is not an on/off switch.
+const CHOICES = Object.freeze({ language: LANGUAGE_SETTINGS, openIn: OPEN_IN, guardPosition: GUARD_POSITIONS, theme: THEMES });
 
 const profileKey = (id) => `${PROFILE_PREFIX}${id}`;
 
 export function normalizeSettings(raw) {
   const settings = { ...DEFAULT_SETTINGS };
   if (!raw || typeof raw !== 'object') return settings;
-  if (LANGUAGE_SETTINGS.includes(raw.language)) settings.language = raw.language;
-  if (OPEN_IN.includes(raw.openIn)) settings.openIn = raw.openIn;
-  if (GUARD_POSITIONS.includes(raw.guardPosition)) settings.guardPosition = raw.guardPosition;
-  if (THEMES.includes(raw.theme)) settings.theme = raw.theme;
-  for (const key of ['guardEnabled', 'guardShowUnregistered', 'guardTitlePrefix', 'showRecent', 'confirmGuarded']) {
-    if (typeof raw[key] === 'boolean') settings[key] = raw[key];
+  for (const [key, fallback] of Object.entries(DEFAULT_SETTINGS)) {
+    const value = raw[key];
+    if (CHOICES[key] ? CHOICES[key].includes(value) : typeof value === typeof fallback) settings[key] = value;
   }
   return settings;
 }

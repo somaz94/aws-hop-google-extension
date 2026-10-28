@@ -1,4 +1,4 @@
-.PHONY: help install test test-cover e2e lint lint-fix package icons version bump-version clean
+.PHONY: help install test test-cover e2e lint lint-fix package icons store-screenshots version bump-version clean
 
 PACKAGE := dist/aws-hop.zip
 
@@ -32,6 +32,9 @@ package: clean ## Package the extension into a ZIP for the Chrome Web Store
 
 icons: ## Redraw icons/icon{16,48,128}.png (needs ImageMagick)
 	@hack/render-icons.sh
+
+store-screenshots: ## Redraw the Chrome Web Store screenshots in store/screenshots (Chrome for Testing, like e2e)
+	node hack/store-screenshots.mjs
 
 clean: ## Remove build artifacts
 	rm -rf dist/

@@ -1,6 +1,6 @@
 # Chrome Web Store Listing
 
-The text pasted into the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole) for AWS Hop. The item name and summary come from `name` and `description` in `manifest.json`, so they are not repeated here.
+The text pasted into the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole) for AWS Hop. The item name and summary come from `name` and the `_locales` description, so they are not repeated here.
 
 <br/>
 
@@ -51,7 +51,11 @@ Developer Tools
 
 ### Language
 
-English
+English is the default listing. The Korean listing uses [`store/listing-ko.txt`](../store/listing-ko.txt) as its description; that text is kept outside `docs/` because it is translated product copy, like `_locales/ko`, not documentation. Keep it in step with the English description above.
+
+### Screenshots
+
+Upload `store/screenshots/en/` to the default listing and `store/screenshots/ko/` as the Korean localized screenshots, in file order. `make store-screenshots` redraws both sets from the extension itself (the example accounts and the slide copy are in `hack/store-screenshots.mjs` and `hack/store-slide.html`); run it after a change to the popup or the options page.
 
 ### Additional fields
 

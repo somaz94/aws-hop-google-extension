@@ -133,7 +133,7 @@ make bump-version VERSION=0.2.0
 make package     # writes dist/aws-hop.zip
 ```
 
-Upload the ZIP in the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole). The listing text, the Privacy tab answers (single purpose, one justification per permission, data usage) and the reviewer test instructions are in [DESCRIPTION.md](DESCRIPTION.md); keep them in step with the Permissions table in the README. Link [Privacy](PRIVACY.md) as the privacy policy.
+Upload the ZIP in the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole). The screenshots in `store/screenshots/` and the Korean listing text in `store/listing-ko.txt` come from `make store-screenshots` and [DESCRIPTION.md](DESCRIPTION.md). The listing text, the Privacy tab answers (single purpose, one justification per permission, data usage) and the reviewer test instructions are in [DESCRIPTION.md](DESCRIPTION.md); keep them in step with the Permissions table in the README. Link [Privacy](PRIVACY.md) as the privacy policy.
 
 <br/>
 

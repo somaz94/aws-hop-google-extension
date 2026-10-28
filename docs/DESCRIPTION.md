@@ -29,7 +29,7 @@ Account guard
 
 Your accounts, your labels
 - Free-form tags (prod, qa, a project name), a color per project and a protected flag
-- A long list stays manageable in the options: search it, drag accounts into order, and change the tag, group or protection of many accounts at once
+- A long list stays manageable in the options: laid out by group, searchable, with drag to reorder or regroup, and the tag, group or protection of many accounts changed at once
 - Type to filter in the popup, then arrow keys and Enter; Alt+Shift+A opens it. Recently opened accounts come first, and protected accounts can be set to need a second Enter
 - Or skip the popup: type aws and an account name in the address bar
 - With the console's multi-session support, an account that is already signed in opens straight in its own session instead of the session picker

@@ -1,6 +1,6 @@
 import { describe, test, expect } from '@jest/globals';
 import {
-  bulkEdit, keepSelected, moveBy, moveNextTo, restoredOrder, selectionState, selectRange, suggestionsFor,
+  bulkEdit, dropMove, groupColor, groupIds, keepSelected, moveBy, moveNextTo, restoredOrder, selectionState, selectRange, suggestionsFor,
 } from '../src/lib/listEdit.js';
 import { normalizeProfile } from '../src/lib/profile.js';
 
@@ -98,6 +98,10 @@ describe('bulkEdit', () => {
     expect(bulkEdit(profiles, ['a', 'b'], { tag: '' }).map((p) => p.tag)).toEqual(['', '']);
   });
 
+  test('sets a color, normalized', () => {
+    expect(bulkEdit(profiles, ['b'], { color: '#ABCDEF' }).map((p) => p.color)).toEqual(['#abcdef']);
+  });
+
   test('ignores every other field', () => {
     expect(bulkEdit(profiles, ['a'], { name: 'renamed', id: 'z', fields: {} })).toEqual([]);
   });
@@ -127,5 +131,34 @@ describe('restoredOrder', () => {
 
   test('ids added since the delete go last, and ids removed since stay out', () => {
     expect(restoredOrder(['a', 'b', 'c'], ['b', 'x', 'c'])).toEqual(['b', 'c', 'x']);
+  });
+});
+
+describe('groups', () => {
+  const profiles = [
+    profile('a', { group: 'shop' }), profile('b', { group: 'data' }), profile('c', { group: 'shop' }), profile('d'),
+  ];
+
+  test('groupIds lists the members, and the empty name the accounts in no group', () => {
+    expect(groupIds(profiles, 'shop')).toEqual(['a', 'c']);
+    expect(groupIds(profiles, '')).toEqual(['d']);
+  });
+
+  test('groupColor is the color every member shares, else null', () => {
+    const colored = profiles.map((p) => (p.group === 'shop' ? { ...p, color: '#123456' } : p));
+    expect(groupColor(colored, 'shop')).toBe('#123456');
+    expect(groupColor(colored.map((p) => (p.id === 'c' ? { ...p, color: '#654321' } : p)), 'shop')).toBeNull();
+    expect(groupColor(profiles, 'shop')).toBeNull();
+    expect(groupColor(colored, '')).toBeNull();
+    expect(groupColor(colored, 'none')).toBeNull();
+  });
+
+  test('a drop moves the row and, onto another group, moves it into that group', () => {
+    const shown = ['a', 'c', 'b', 'd'];
+    expect(dropMove(profiles, shown, 'c', 'a', false)).toEqual({ order: ['c', 'a', 'b', 'd'], regrouped: null });
+    const across = dropMove(profiles, shown, 'd', 'b', true);
+    expect(across.order).toEqual(['a', 'c', 'b', 'd']);
+    expect([across.regrouped.id, across.regrouped.group]).toEqual(['d', 'data']);
+    expect(dropMove(profiles, shown, 'x', 'a', false).regrouped).toBeNull();
   });
 });

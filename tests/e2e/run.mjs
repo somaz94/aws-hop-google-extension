@@ -633,6 +633,28 @@ async function run(cdp) {
   await bulk({}, 'bulk-protect');
   check('protects them', await storedBecome([['shop-prod', '', true], ['shop-dev', 'team', true], ['data-sso', 'team', true]], 'bulk protect'),
     [['shop-prod', '', true], ['shop-dev', 'team', true], ['data-sso', 'team', true]]);
+  check('accounts in a group are listed under its heading', await options.eval(`[...document.querySelectorAll('#profile-list > li')]
+    .map((li) => (li.classList.contains('group-head') ? '# ' + li.querySelector('.group-name').textContent : li.querySelector('.name').textContent))`),
+  ['# No group', 'shop-prod', '# team', 'shop-dev', 'data-sso']);
+  await options.eval(`(() => {
+    document.querySelector('.group-head[data-group="team"] [data-action="rename-group"]').click();
+    const input = document.querySelector('.group-rename');
+    input.value = 'squad';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  })()`);
+  check('renaming a group renames it on every account', await storedBecome([['shop-prod', '', true], ['shop-dev', 'squad', true], ['data-sso', 'squad', true]], 'the rename'),
+    [['shop-prod', '', true], ['shop-dev', 'squad', true], ['data-sso', 'squad', true]]);
+  await waitFor(() => options.eval(`document.querySelector('.group-head[data-group="squad"] [data-action="group-color"]') || null`), 'the renamed heading');
+  await options.eval(`(() => {
+    const color = document.querySelector('.group-head[data-group="squad"] [data-action="group-color"]');
+    color.value = '#123456';
+    color.dispatchEvent(new Event('change', { bubbles: true }));
+  })()`);
+  const groupColors = () => options.eval(`chrome.storage.sync.get(null).then((items) => items.profileOrder.map((id) => items['profile:' + id].color))`);
+  check('a group color is saved on every account in it', await waitFor(async () => {
+    const colors = await groupColors();
+    return colors[1] === '#123456' ? colors : null;
+  }, 'the group color').catch(() => groupColors()), [null, '#123456', '#123456']);
   await bulk({ 'bulk-group': '' }, 'bulk-set-group');
   await bulk({}, 'bulk-unprotect');
   check('an empty group clears it, and unprotect lifts the protection', await storedBecome([['shop-prod', '', true], ['shop-dev', '', false], ['data-sso', '', false]], 'bulk clear'),

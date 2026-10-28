@@ -170,6 +170,11 @@ export default Object.freeze({
   'options.bulk.clear': 'Clear selection',
   'options.bulk.help': 'Setting an empty tag or group clears it.\nShift-click a box to select every account up to it.',
   'options.undo': 'Undo',
+  'options.group.none': 'No group',
+  'options.group.selectOf': 'Select every account in {name}',
+  'options.group.rename': 'Rename',
+  'options.group.renameOf': 'New name for {name}',
+  'options.group.colorOf': 'Color of {name}',
   'options.undo.deleted': 'Deleted {names}.',
   'options.bulk.confirmDelete': 'Delete these {count} accounts?\n{names}',
 

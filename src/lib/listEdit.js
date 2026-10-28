@@ -1,7 +1,7 @@
 import { normalizeProfile } from './profile.js';
 
 // The fields the options page can change on many accounts at once.
-const BULK_FIELDS = Object.freeze(['tag', 'group', 'guarded']);
+const BULK_FIELDS = Object.freeze(['tag', 'group', 'guarded', 'color']);
 
 /** Moves `id` by `delta` places, stopping at either end. */
 export function moveBy(ids, id, delta) {
@@ -46,7 +46,7 @@ export function selectionState(selected, ids) {
   return count === ids.length ? 'all' : 'some';
 }
 
-/** The profiles in `ids` with the tag, group or guarded flag in `changes` applied, leaving out those it does not change. */
+/** The profiles in `ids` with the tag, group, guarded flag or color in `changes` applied, leaving out those it does not change. */
 export function bulkEdit(profiles, ids, changes) {
   const patch = Object.fromEntries(BULK_FIELDS.filter((key) => Object.hasOwn(changes, key)).map((key) => [key, changes[key]]));
   const chosen = new Set(ids);
@@ -69,4 +69,25 @@ export function restoredOrder(previous, current) {
   const present = new Set(current);
   const before = new Set(previous);
   return [...previous.filter((id) => present.has(id)), ...current.filter((id) => !before.has(id))];
+}
+
+/** The ids of the accounts in `group`; an empty group name means the accounts in none. */
+export function groupIds(profiles, group) {
+  return profiles.filter((profile) => profile.group === group).map((profile) => profile.id);
+}
+
+/** The color every account in `group` shares when one was chosen for all of them, else null. */
+export function groupColor(profiles, group) {
+  if (!group) return null;
+  const colors = new Set(profiles.filter((profile) => profile.group === group).map((profile) => profile.color));
+  return colors.size === 1 ? [...colors][0] : null;
+}
+
+/** Where a dragged row lands: the new order, and its profile moved into the target row's group when that differs. */
+export function dropMove(profiles, ids, id, targetId, after) {
+  const byId = new Map(profiles.map((profile) => [profile.id, profile]));
+  const source = byId.get(id);
+  const target = byId.get(targetId);
+  const regrouped = source && target && source.group !== target.group ? normalizeProfile({ ...source, group: target.group }) : null;
+  return { order: moveNextTo(ids, id, targetId, after), regrouped };
 }

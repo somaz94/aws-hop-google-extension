@@ -1,5 +1,6 @@
 import { richText } from '../i18n/dom.js';
 import { t } from '../i18n/index.js';
+import { groupColor } from '../lib/listEdit.js';
 import { accountFromHash } from '../lib/messages.js';
 import {
   buildProfileUrl, fieldValues, FIELD_PREFIX, GROUP_MAX, NAME_MAX, normalizeProfile, profileColor, sameTargetAs, validateProfile,
@@ -56,7 +57,8 @@ export function createEditor({ store, profiles, reload }) {
       provider: data.get('provider'),
       tag: data.get('tag'),
       guarded: form.elements.guarded.checked,
-      color: form.elements.autoColor.checked ? null : data.get('color'),
+      // Automatic color follows a color chosen for the whole group, so a new member matches the others.
+      color: form.elements.autoColor.checked ? groupColor(profiles(), String(data.get('group') ?? '').trim()) : data.get('color'),
       group: data.get('group'),
       fields: currentFieldValues(),
     });

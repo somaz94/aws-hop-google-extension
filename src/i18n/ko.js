@@ -169,6 +169,11 @@ export default Object.freeze({
   'options.bulk.clear': '선택 해제',
   'options.bulk.help': '태그나 그룹을 비운 채 지정하면 지워집니다.\nShift를 누른 채 체크박스를 누르면 그 계정까지 한꺼번에 선택합니다.',
   'options.undo': '되돌리기',
+  'options.group.none': '그룹 없음',
+  'options.group.selectOf': '{name} 그룹 계정 모두 선택',
+  'options.group.rename': '이름 바꾸기',
+  'options.group.renameOf': '{name} 그룹의 새 이름',
+  'options.group.colorOf': '{name} 그룹 색',
   'options.undo.deleted': '{names} 계정을 삭제했습니다.',
   'options.bulk.confirmDelete': '계정 {count}개를 삭제할까요?\n{names}',
 

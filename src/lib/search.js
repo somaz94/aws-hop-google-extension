@@ -59,6 +59,20 @@ export function moveSelection(index, delta, length) {
   return (((index + delta) % length) + length) % length;
 }
 
+/**
+ * What a key does in an account picker (the popup and the console menu): `move` to a new selection, `open` the
+ * row at `index`, `unconfirm` a pending second Enter, or `escape`, which each picker handles its own way.
+ */
+export function pickerKey(key, { selected, length, confirming }) {
+  if (key === 'ArrowDown' || key === 'ArrowUp') return { action: 'move', selected: moveSelection(selected, key === 'ArrowDown' ? 1 : -1, length) };
+  if (key === 'Enter' && length) return { action: 'open', index: Math.max(selected, 0) };
+  if (key === 'Escape') return { action: confirming ? 'unconfirm' : 'escape' };
+  return null;
+}
+
+/** Shift, Ctrl, Cmd or a middle click opens the account where the open-in setting would not. */
+export const invertsTarget = (event) => Boolean(event.shiftKey || event.metaKey || event.ctrlKey || event.button === 1);
+
 /** True when opening `profile` must wait for a second Enter or click, because it is protected and not yet confirmed. */
 export function needsConfirmation(profile, settings, confirmingId) {
   return Boolean(settings.confirmGuarded && profile.guarded && confirmingId !== profile.id);

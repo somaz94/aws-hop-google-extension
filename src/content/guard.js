@@ -58,6 +58,72 @@ export function buildBadge(view, profile) {
   return { text, color, textColor: readableTextColor(color) };
 }
 
+/** Sends to the worker; a worker that is not listening, or an extension reloaded under this page, is ignored. */
+function workerSender(runtime) {
+  return (message) => {
+    try {
+      runtime?.sendMessage?.(message)?.catch(() => {});
+    } catch {
+      // Nothing left to tell.
+    }
+  };
+}
+
+/**
+ * Calls `onChange`, debounced, while the page changes during the first `observeMs`: the navigation bar renders
+ * well after document_idle, so the page is watched for a while, not forever. Returns a function that stops it.
+ */
+function watchPage(doc, onChange, observeMs) {
+  let pending = null;
+  const observer = new doc.defaultView.MutationObserver(() => {
+    pending ??= setTimeout(() => {
+      pending = null;
+      onChange();
+    }, DEBOUNCE_MS);
+  });
+  observer.observe(doc.documentElement, { attributes: true, attributeFilter: [NAV_ATTR], childList: true, subtree: true });
+  const stopWatching = setTimeout(() => observer.disconnect(), observeMs);
+  return () => {
+    clearTimeout(stopWatching);
+    clearTimeout(pending);
+    observer.disconnect();
+  };
+}
+
+/** The account menu behind the label, built on the first click; `data(recentIds)` describes what it lists. */
+function guardMenu({ doc, recent, send, showRecent, data }) {
+  let menu = null;
+  let recentIds = [];
+  return {
+    async activate() {
+      try {
+        if (!menu?.isOpen) recentIds = showRecent() ? await recent.load() : [];
+      } catch {
+        recentIds = [];
+      }
+      const root = doc.querySelector(HOST_TAG)?.shadowRoot;
+      if (!root) return;
+      menu ??= createMenu(root, {
+        // The worker opens it, so the session it is signed in to and the open-in setting apply as in the popup.
+        onOpen: (profileId, invert) => send({ type: MSG.OPEN_PROFILE, profileId, invert }),
+        onCollapse: () => collapseGuard(doc),
+      });
+      menu.toggle(data(recentIds));
+    },
+    refresh() {
+      menu?.refresh(data(recentIds));
+    },
+    /** Closes it and forgets it, for a label that is no longer drawn. */
+    discard() {
+      menu?.close();
+      menu = null;
+    },
+    close() {
+      menu?.close();
+    },
+  };
+}
+
 export async function startGuard({
   doc = globalThis.document,
   hostname = globalThis.location?.hostname,
@@ -74,56 +140,35 @@ export async function startGuard({
   let lastView;
   let badge = null;
 
-  const send = (message) => {
-    // Rejects when the worker is not listening, and throws once the extension was reloaded under this page.
-    try {
-      runtime?.sendMessage?.(message)?.catch(() => {});
-    } catch {
-      // Nothing left to tell.
-    }
-  };
+  const send = workerSender(runtime);
   const sendBadge = () => send({ type: MSG.SET_BADGE, badge });
   const onSessionHost = Boolean(identityFromHost(hostname));
 
-  let menu = null;
-  let recentIds = [];
-  const menuData = () => ({
-    profiles,
-    settings,
-    currentId: state.profile?.id ?? null,
-    recent: settings.showRecent ? recentProfiles(profiles, recentIds) : [],
-    side: settings.guardPosition === 'bottom-right' ? 'right' : 'left',
+  const menu = guardMenu({
+    doc,
+    recent,
+    send,
+    showRecent: () => settings.showRecent,
+    data: (recentIds) => ({
+      profiles,
+      settings,
+      currentId: state.profile?.id ?? null,
+      recent: settings.showRecent ? recentProfiles(profiles, recentIds) : [],
+      side: settings.guardPosition === 'bottom-right' ? 'right' : 'left',
+    }),
   });
-  const onActivate = async () => {
-    try {
-      if (!menu?.isOpen) recentIds = settings.showRecent ? await recent.load() : [];
-    } catch {
-      recentIds = [];
-    }
-    const root = doc.querySelector(HOST_TAG)?.shadowRoot;
-    if (!root) return;
-    menu ??= createMenu(root, {
-      // The worker opens it, so the session it is signed in to and the open-in setting apply as in the popup.
-      onOpen: (profileId, invert) => send({ type: MSG.OPEN_PROFILE, profileId, invert }),
-      onCollapse: () => collapseGuard(doc),
-    });
-    menu.toggle(menuData());
-  };
 
   const update = () => {
     const identity = detectIdentity({ hostname, navInfo: readNavInfo(doc), doc });
     const profile = matchProfile(profiles, identity);
     state = { identity, profile };
-    menu?.refresh(menuData());
+    menu.refresh();
     const view = buildView(identity, profile, settings);
     const key = JSON.stringify(view);
     if (key === lastView) return;
     lastView = key;
-    if (!view) {
-      menu?.close();
-      menu = null;
-    }
-    renderGuard(doc, view, { onActivate });
+    if (!view) menu.discard();
+    renderGuard(doc, view, { onActivate: menu.activate });
     title.set(view?.titlePrefix ?? null);
     badge = buildBadge(view, profile);
     sendBadge();
@@ -133,16 +178,7 @@ export async function startGuard({
 
   update();
 
-  // The navigation bar renders well after document_idle, so watch the page for a while, not forever.
-  let pending = null;
-  const observer = new doc.defaultView.MutationObserver(() => {
-    pending ??= setTimeout(() => {
-      pending = null;
-      update();
-    }, DEBOUNCE_MS);
-  });
-  observer.observe(doc.documentElement, { attributes: true, attributeFilter: [NAV_ATTR], childList: true, subtree: true });
-  const stopWatching = setTimeout(() => observer.disconnect(), observeMs);
+  const stopWatching = watchPage(doc, update, observeMs);
 
   const unsubscribe = store.onChange(async (changed) => {
     if (changed.profiles) profiles = await store.loadProfiles();
@@ -172,15 +208,13 @@ export async function startGuard({
       return state;
     },
     stop() {
-      clearTimeout(stopWatching);
-      clearTimeout(pending);
-      observer.disconnect();
+      stopWatching();
       unsubscribe();
       runtime?.onMessage.removeListener(onMessage);
       doc.defaultView.removeEventListener('pageshow', onPageShow);
       badge = null;
       sendBadge();
-      menu?.close();
+      menu.close();
       title.set(null);
       title.stop();
       renderGuard(doc, null);

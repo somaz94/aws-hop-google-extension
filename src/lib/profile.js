@@ -109,6 +109,11 @@ export function profileAccount(profile) {
   return getProvider(profile.provider)?.accountOf(profile.fields) ?? null;
 }
 
+/** The console page the profile opens after sign-in, or null for the console home. */
+export function profileLanding(profile) {
+  return getProvider(profile.provider)?.landingOf?.(profile.fields) ?? null;
+}
+
 /** Role names the console may show while this profile is active, used to break ties between profiles. */
 export function profileRoles(profile) {
   const provider = getProvider(profile.provider);

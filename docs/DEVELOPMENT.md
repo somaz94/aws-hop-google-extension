@@ -102,6 +102,7 @@ The mock pages stand in for the console's navigation data and header markup, so 
    | `normalize(fields)` | no | Cross-field clean-up after each field's own `normalize` |
    | `roleOf(fields, { name })` | no | Role names the console may show for this account, to break ties |
    | `targetOf(fields)` | no | The fields that decide where it signs in, when some are cosmetic (Switch Role drops the display name) |
+   | `landingOf(fields)` | no | The console page to open after sign-in, or `null` for the console home; a remembered console session opens it too |
 
    Each field is `{ key, label, required, placeholder?, help?, type?, normalize?(value), validate?(value) }`. `label` and `help` are message keys; `placeholder` is a key or literal example text. `validate` returns an error message, built with `t()`, or `null`, and only runs on non-empty values. Account inputs can reuse `accountRefField` and `accountIdField` from `src/providers/fields.js`.
 

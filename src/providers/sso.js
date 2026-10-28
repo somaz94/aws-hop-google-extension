@@ -59,4 +59,7 @@ export default {
   roleOf({ roleName }) {
     return [roleName];
   },
+  landingOf({ destination }) {
+    return destination || null;
+  },
 };

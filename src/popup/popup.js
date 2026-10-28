@@ -9,7 +9,7 @@ import { openProfile } from '../lib/open.js';
 import { profileColor, profileLabel, profileMeta } from '../lib/profile.js';
 import { createRecentStore, recentProfiles } from '../lib/recent.js';
 import { createSessionStore } from '../lib/sessions.js';
-import { moveSelection, needsConfirmation, popupSections, resolveOpenTarget } from '../lib/search.js';
+import { invertsTarget, needsConfirmation, pickerKey, popupSections, resolveOpenTarget } from '../lib/search.js';
 import { createStore } from '../lib/store.js';
 import { createThemer } from '../lib/theme.js';
 import { getProvider } from '../providers/index.js';
@@ -146,8 +146,6 @@ async function open(profile, invert) {
   window.close();
 }
 
-const inverted = (event) => event.shiftKey || event.metaKey || event.ctrlKey || event.button === 1;
-
 ui.search.addEventListener('input', () => {
   confirmingId = null;
   selected = ui.search.value.trim() ? 0 : -1;
@@ -155,31 +153,31 @@ ui.search.addEventListener('input', () => {
 });
 
 document.addEventListener('keydown', (event) => {
-  if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-    event.preventDefault();
+  if (event.key === 'Enter' && event.target instanceof HTMLButtonElement) return;
+  const step = pickerKey(event.key, { selected, length: visible.length, confirming: Boolean(confirmingId) });
+  // With nothing to clear, Escape is left to Chrome, which closes the popup.
+  if (!step || (step.action === 'escape' && !ui.search.value)) return;
+  event.preventDefault();
+  if (step.action === 'move') {
     confirmingId = null;
-    selected = moveSelection(selected, event.key === 'ArrowDown' ? 1 : -1, visible.length);
-    render();
-  } else if (event.key === 'Enter' && visible.length && !(event.target instanceof HTMLButtonElement)) {
-    event.preventDefault();
-    open(visible[Math.max(selected, 0)], inverted(event));
-  } else if (event.key === 'Escape' && confirmingId) {
-    event.preventDefault();
+    selected = step.selected;
+  } else if (step.action === 'open') {
+    open(visible[step.index], invertsTarget(event));
+    return;
+  } else if (step.action === 'unconfirm') {
     confirmingId = null;
-    render();
-  } else if (event.key === 'Escape' && ui.search.value) {
-    event.preventDefault();
+  } else {
     ui.search.value = '';
     selected = -1;
-    render();
   }
+  render();
 });
 
 const onRowClick = (event) => {
   const row = event.target.closest('.row');
   if (!row) return;
   selected = Number(row.dataset.index);
-  open(visible[selected], inverted(event));
+  open(visible[selected], invertsTarget(event));
 };
 ui.list.addEventListener('click', onRowClick);
 ui.list.addEventListener('auxclick', (event) => {

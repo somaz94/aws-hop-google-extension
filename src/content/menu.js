@@ -1,7 +1,7 @@
 import { t } from '../i18n/index.js';
 import { formatAccountId } from '../lib/account.js';
 import { profileAccount, profileColor, profileLabel } from '../lib/profile.js';
-import { filterProfiles, moveSelection, needsConfirmation } from '../lib/search.js';
+import { filterProfiles, invertsTarget, needsConfirmation, pickerKey } from '../lib/search.js';
 import { FONT } from './banner.js';
 
 const STYLE = `
@@ -28,8 +28,6 @@ const STYLE = `
 .row.confirming .meta { color: #ff8a80; opacity: 1; }
 .empty { padding: 6px 12px 10px; opacity: 0.75; }
 `;
-
-const inverted = (event) => event.shiftKey || event.metaKey || event.ctrlKey || event.button === 1;
 
 /** Recently opened accounts first, then the rest in the user's order; one ranked list while searching. */
 export function menuProfiles(profiles, { query = '', recent = [] } = {}) {
@@ -71,7 +69,7 @@ export function createMenu(root, { onOpen, onCollapse }) {
       if (profile.id === confirmingId) meta = t('popup.confirmOpen');
       else if (profile.id === data.currentId) meta = t('popup.current');
       row.append(dot, name, Object.assign(doc.createElement('span'), { className: 'meta', textContent: meta }));
-      row.addEventListener('click', (event) => activate(profile, inverted(event)));
+      row.addEventListener('click', (event) => activate(profile, invertsTarget(event)));
       row.addEventListener('auxclick', (event) => {
         if (event.button === 1) activate(profile, true);
       });
@@ -93,21 +91,14 @@ export function createMenu(root, { onOpen, onCollapse }) {
     event.stopPropagation();
     if (event.type !== 'keydown') return;
     const profiles = visible();
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      event.preventDefault();
-      confirmingId = null;
-      selected = moveSelection(selected, event.key === 'ArrowDown' ? 1 : -1, profiles.length);
-      renderList();
-    } else if (event.key === 'Enter' && profiles.length) {
-      event.preventDefault();
-      activate(profiles[Math.max(selected, 0)], inverted(event));
-    } else if (event.key === 'Escape') {
-      event.preventDefault();
-      if (confirmingId) {
-        confirmingId = null;
-        renderList();
-      } else close();
-    }
+    const step = pickerKey(event.key, { selected, length: profiles.length, confirming: Boolean(confirmingId) });
+    if (!step) return;
+    event.preventDefault();
+    if (step.action === 'open') return activate(profiles[step.index], invertsTarget(event));
+    if (step.action === 'escape') return close();
+    if (step.action === 'move') selected = step.selected;
+    confirmingId = null;
+    return renderList();
   }
 
   function onOutside(event) {

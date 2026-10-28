@@ -1,5 +1,5 @@
 import { identityFromHost } from './identity.js';
-import { buildProfileUrl } from './profile.js';
+import { buildProfileUrl, profileLanding } from './profile.js';
 
 // In chrome.storage.local, so an extension update or a browser restart keeps them; never synced, like the cookies they point at.
 const SESSION_PREFIX = 'session:';
@@ -21,11 +21,11 @@ export function sessionOrigin(url) {
   return isSession ? parsed.origin : null;
 }
 
-/** A page inside the session: the IAM Identity Center destination's page when there is one, else the console home. */
+/** A page inside the session: the profile's landing page when it has one, else the console home. */
 export function sessionUrl(profile, origin) {
-  const destination = profile.fields.destination;
-  if (!destination) return `${origin}/console/home`;
-  const { pathname, search, hash } = new URL(destination);
+  const landing = profileLanding(profile);
+  if (!landing) return `${origin}/console/home`;
+  const { pathname, search, hash } = new URL(landing);
   return `${origin}${pathname}${search}${hash}`;
 }
 

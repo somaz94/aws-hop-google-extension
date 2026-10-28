@@ -1,7 +1,9 @@
 import { describe, test, expect } from '@jest/globals';
 import { matchProfile, normalizeRoleName } from '../src/lib/match.js';
 import { normalizeProfile } from '../src/lib/profile.js';
-import { filterProfiles, groupProfiles, moveSelection, needsConfirmation, popupSections, resolveOpenTarget } from '../src/lib/search.js';
+import {
+  filterProfiles, groupProfiles, invertsTarget, moveSelection, needsConfirmation, pickerKey, popupSections, resolveOpenTarget,
+} from '../src/lib/search.js';
 
 let next = 0;
 const make = (input) => normalizeProfile(input, { idFactory: () => `id-${next++}` });
@@ -145,5 +147,38 @@ describe('resolveOpenTarget', () => {
     ['current-tab', true, 'new-tab'],
   ])('%p with modifier %p → %p', (openIn, invert, expected) => {
     expect(resolveOpenTarget(openIn, invert)).toBe(expected);
+  });
+});
+
+describe('pickerKey', () => {
+  const state = (extra) => ({ selected: 1, length: 3, confirming: false, ...extra });
+
+  test.each([
+    ['ArrowDown', state(), { action: 'move', selected: 2 }],
+    ['ArrowUp', state({ selected: 0 }), { action: 'move', selected: 2 }],
+    ['Enter', state(), { action: 'open', index: 1 }],
+    ['Enter', state({ selected: -1 }), { action: 'open', index: 0 }],
+    ['Escape', state({ confirming: true }), { action: 'unconfirm' }],
+    ['Escape', state(), { action: 'escape' }],
+  ])('%s → %p', (key, current, expected) => {
+    expect(pickerKey(key, current)).toEqual(expected);
+  });
+
+  test('Enter on an empty list and other keys do nothing', () => {
+    expect(pickerKey('Enter', state({ length: 0, selected: -1 }))).toBeNull();
+    expect(pickerKey('a', state())).toBeNull();
+  });
+});
+
+describe('invertsTarget', () => {
+  test.each([
+    [{ shiftKey: true }, true],
+    [{ metaKey: true }, true],
+    [{ ctrlKey: true }, true],
+    [{ button: 1 }, true],
+    [{ button: 0 }, false],
+    [{}, false],
+  ])('%p → %p', (event, expected) => {
+    expect(invertsTarget(event)).toBe(expected);
   });
 });

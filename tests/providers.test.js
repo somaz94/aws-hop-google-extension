@@ -1,7 +1,8 @@
 import { describe, test, expect } from '@jest/globals';
-import { buildProfileUrl, normalizeProfile, profileAccount, profileRoles, validateProfile } from '../src/lib/profile.js';
+import { buildProfileUrl, normalizeProfile, profileAccount, profileLanding, profileRoles, validateProfile } from '../src/lib/profile.js';
 import { colorFor } from '../src/lib/tag.js';
 import { httpsUrlError } from '../src/providers/fields.js';
+import { carryFields, draftForAccount } from '../src/providers/index.js';
 import { normalizeStartUrl } from '../src/providers/sso.js';
 
 const make = (provider, fields, extra = {}) => normalizeProfile({ name: 'shop-prod', provider, fields, ...extra });
@@ -148,5 +149,31 @@ describe('httpsUrlError', () => {
   test('names the allowed suffixes', () => {
     expect(httpsUrlError('https://example.com', ['.awsapps.com'])).toBe('The host must end with .awsapps.com');
     expect(httpsUrlError('https://example.com', ['.a', '.b', '.c'])).toBe('The host must end with .a, .b or .c');
+  });
+});
+
+describe('landing page', () => {
+  test('only IAM Identity Center has one, and only when it is set', () => {
+    const sso = (destination) => normalizeProfile({
+      name: 'x', provider: 'sso', fields: { startUrl: 'https://example.awsapps.com/start', accountId: '111122223333', roleName: 'ReadOnly', destination },
+    });
+    expect(profileLanding(sso('https://console.aws.amazon.com/s3/home'))).toBe('https://console.aws.amazon.com/s3/home');
+    expect(profileLanding(sso(''))).toBeNull();
+    expect(profileLanding(normalizeProfile({ name: 'x', provider: 'iam-user', fields: { account: '111122223333' } }))).toBeNull();
+    expect(profileLanding({ provider: 'gone', fields: {} })).toBeNull();
+  });
+});
+
+describe('registry helpers', () => {
+  test('an account known only by its ID starts as a valid IAM user sign-in', () => {
+    const draft = draftForAccount('111122223333');
+    expect(draft).toEqual({ provider: 'iam-user', fields: { account: '111122223333' } });
+    expect(validateProfile(normalizeProfile({ name: 'x', ...draft }))).toEqual([]);
+  });
+
+  test('switching methods keeps the account under either key', () => {
+    expect(carryFields({ account: 'shop', roleName: 'Admin' })).toEqual({ account: 'shop', accountId: 'shop', roleName: 'Admin' });
+    expect(carryFields({ accountId: '111122223333' })).toEqual({ account: '111122223333', accountId: '111122223333' });
+    expect(carryFields({ account: 'a', accountId: 'b' })).toEqual({ account: 'a', accountId: 'b' });
   });
 });

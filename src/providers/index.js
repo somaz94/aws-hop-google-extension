@@ -15,3 +15,16 @@ export function listProviders() {
 export function getProvider(id) {
   return BY_ID.get(id) ?? null;
 }
+
+/** A new account known only by its ID, as the popup's "Add this account" offers it: IAM user sign-in, the one method that needs nothing else. */
+export function draftForAccount(account) {
+  return { provider: iamUser.id, fields: { account } };
+}
+
+/** Field values to keep when switching sign-in methods: `account` and `accountId` are the same thing to the user. */
+export function carryFields(values) {
+  const next = { ...values };
+  next.account ||= next.accountId;
+  next.accountId ||= next.account;
+  return next;
+}

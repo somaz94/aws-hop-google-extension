@@ -3,7 +3,7 @@ import { t } from '../i18n/index.js';
 import { accountFromHash } from '../lib/messages.js';
 import { buildProfileUrl, fieldValues, FIELD_PREFIX, GROUP_MAX, NAME_MAX, normalizeProfile, profileColor, validateProfile } from '../lib/profile.js';
 import { TAG_MAX } from '../lib/tag.js';
-import { getProvider, listProviders } from '../providers/index.js';
+import { carryFields, draftForAccount, getProvider, listProviders } from '../providers/index.js';
 import { $, element, option } from './dom.js';
 
 /** The add and edit dialog. */
@@ -105,15 +105,11 @@ export function createEditor({ store, reload }) {
     const account = accountFromHash(location.hash);
     if (account === null) return;
     history.replaceState(null, '', location.pathname);
-    open({ provider: 'iam-user', fields: { account } });
+    open(draftForAccount(account));
   }
 
   form.elements.provider.addEventListener('change', () => {
-    // Carry typed values over to the new method; `account` and `accountId` are the same thing to the user.
-    const values = currentFieldValues();
-    values.account ||= values.accountId;
-    values.accountId ||= values.account;
-    renderProviderFields(getProvider(form.elements.provider.value), values);
+    renderProviderFields(getProvider(form.elements.provider.value), carryFields(currentFieldValues()));
     refreshPreview();
   });
 

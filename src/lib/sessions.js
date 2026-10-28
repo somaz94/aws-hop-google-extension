@@ -1,9 +1,11 @@
 import { identityFromHost } from './identity.js';
 import { buildProfileUrl } from './profile.js';
 
-// In chrome.storage.session: a console session ends with the browser anyway, and nothing here is synced.
+// In chrome.storage.local, so an extension update or a browser restart keeps them; never synced, like the cookies they point at.
 const SESSION_PREFIX = 'session:';
 const CONSOLE_DOMAIN = '.console.aws.amazon.com';
+// No console session outlives 12 hours from sign-in, and an entry is never older than its last sighting, so it never expires early.
+export const SESSION_MAX_MS = 12 * 60 * 60 * 1000;
 
 const sessionKey = (profileId) => `${SESSION_PREFIX}${profileId}`;
 
@@ -28,15 +30,19 @@ export function sessionUrl(profile, origin) {
 }
 
 /** One item per account, so two tabs reporting at once cannot overwrite each other. */
-export function createSessionStore({ area = globalThis.chrome?.storage?.session } = {}) {
+export function createSessionStore({ area = globalThis.chrome?.storage?.local, now = Date.now } = {}) {
   return {
     async originFor(profileId) {
-      const items = await area.get(sessionKey(profileId));
-      return items[sessionKey(profileId)] ?? null;
+      const key = sessionKey(profileId);
+      const entry = (await area.get(key))[key];
+      if (!entry) return null;
+      if (typeof entry.origin === 'string' && now() - entry.seenAt < SESSION_MAX_MS) return entry.origin;
+      await area.remove(key);
+      return null;
     },
     async remember(profileId, origin) {
       if (typeof profileId !== 'string' || !profileId || !origin) return;
-      await area.set({ [sessionKey(profileId)]: origin });
+      await area.set({ [sessionKey(profileId)]: { origin, seenAt: now() } });
     },
   };
 }

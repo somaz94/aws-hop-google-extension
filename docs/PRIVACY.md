@@ -22,7 +22,7 @@ AWS Hop never asks for, reads or stores passwords, access keys, session tokens o
 
 ## Where it is stored
 
-In `chrome.storage.sync`, except the recently opened list, which stays in `chrome.storage.local` on that one browser and is deleted when you turn the recent list off, and the session addresses, which stay in memory (`chrome.storage.session`) and are gone when the browser closes. Chrome keeps it in your browser profile and, if you are signed in to Chrome with sync turned on, syncs it to your other browsers through your Google account. AWS Hop has no server and makes no network requests.
+In `chrome.storage.sync`, except the recently opened list, which stays in `chrome.storage.local` on that one browser and is deleted when you turn the recent list off, and the session addresses, which also stay in `chrome.storage.local` on that browser and are dropped 12 hours after the session was last seen. Chrome keeps it in your browser profile and, if you are signed in to Chrome with sync turned on, syncs it to your other browsers through your Google account. AWS Hop has no server and makes no network requests.
 
 <br/>
 

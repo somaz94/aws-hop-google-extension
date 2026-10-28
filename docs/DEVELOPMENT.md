@@ -54,7 +54,7 @@ Content scripts declared in the manifest cannot be ES modules, and the guard nee
 2. `loader.js` runs in the **isolated** world and imports `guard.js` from the extension through `chrome.runtime.getURL`
 3. `guard.js` detects the account (`src/lib/identity.js`), matches it to an account (`src/lib/match.js`) and draws the guard in a shadow root (`banner.js`)
 
-On a multi-session host the guard also reports which account the page belongs to (`MSG.SESSION_SEEN`, the account only); the worker takes the session's origin from `sender.url`, never from the message, and keeps it in `chrome.storage.session` for `openUrlFor` in the popup and the address bar.
+On a multi-session host the guard also reports which account the page belongs to (`MSG.SESSION_SEEN`, the account only); the worker takes the session's origin from `sender.url`, never from the message, and keeps it with the time it was seen in `chrome.storage.local` for `openUrlFor` in the popup, the address bar and the guard menu. An entry is ignored 12 hours after it was last seen; no console session lasts longer from sign-in, so a live session is never forgotten early.
 
 Clicking the label opens `menu.js`, built on demand and removed on close so the account list is in the page only while it is shown; it stops key events so typing never triggers console shortcuts. A pick goes to the worker as `MSG.OPEN_PROFILE` (the account id and the modifier only), and `open.js` opens it with the same rules as the popup and the address bar.
 

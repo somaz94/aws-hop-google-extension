@@ -2,6 +2,47 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.3.0](https://github.com/somaz94/aws-hop-google-extension/compare/v0.2.0...v0.3.0) (2026-10-29)
+
+### Features
+
+- add ungroup actions and carry group colors when accounts move ([f74fe6f](https://github.com/somaz94/aws-hop-google-extension/commit/f74fe6f5da5369e2c96e9174557207bd3223583a))
+- mark accounts with a remembered console session in the popup ([0de2594](https://github.com/somaz94/aws-hop-google-extension/commit/0de25945941aa890f9f5d8465f3b28873b9c6c42))
+- group the options account list with per-group edit actions ([1d7dc19](https://github.com/somaz94/aws-hop-google-extension/commit/1d7dc19e2c94b7371d25f74e36df35b27de0ec0a))
+- offer to undo account deletes on the options page ([e375015](https://github.com/somaz94/aws-hop-google-extension/commit/e375015aab7e12f58dd5228a43fc4a95678751c3))
+- include settings in the JSON export and offer them on import ([de1ba0d](https://github.com/somaz94/aws-hop-google-extension/commit/de1ba0d15b0e565921e39d441183a02251abb8f6))
+- warn when an account signs in to the same place as another ([28c70ad](https://github.com/somaz94/aws-hop-google-extension/commit/28c70ad8d0761642b7c9b4d9a9a58a592cff5eb1))
+- add a system, light or dark theme setting ([f04f926](https://github.com/somaz94/aws-hop-google-extension/commit/f04f926877b6a942901310c6cc3c64275c3e238b))
+- add search, drag reorder and bulk edit to the account list ([8f2f6c5](https://github.com/somaz94/aws-hop-google-extension/commit/8f2f6c56d5d1550a77ca1bb5aa19adef9e6d8447))
+
+### Bug Fixes
+
+- drop the group from account rows under a group heading ([65f7b7e](https://github.com/somaz94/aws-hop-google-extension/commit/65f7b7e77cc82ca917d0d561a2c2162ca2ae6a6c))
+- lay out the options bulk edit bar in rows by function ([14f1fa5](https://github.com/somaz94/aws-hop-google-extension/commit/14f1fa5072e9bd8ccb462581d7785d67a71ffdc4))
+
+### Performance Improvements
+
+- coalesce overlapping account list reloads on the options page ([af3396c](https://github.com/somaz94/aws-hop-google-extension/commit/af3396cc3b1a9919e7c407840d8331036429c677))
+
+### Code Refactoring
+
+- share picker keys and keep provider details in the providers ([af1212a](https://github.com/somaz94/aws-hop-google-extension/commit/af1212a89bf9089242b5edaeed5894d444a4e84b))
+- split the options page into per-panel modules ([5ec19b1](https://github.com/somaz94/aws-hop-google-extension/commit/5ec19b132f67972c7b57b021bee4336ad6ef13f0))
+- share open rules, serial queue and setting save helpers ([04cfb41](https://github.com/somaz94/aws-hop-google-extension/commit/04cfb41d87e43c3aa758075d3203089d5439a605))
+- share account label, meta line and language setup helpers ([3ff573d](https://github.com/somaz94/aws-hop-google-extension/commit/3ff573da7b7fd271483983ef423ecfeaa1c2385e))
+
+### Chores
+
+- bump version to 0.3.0 ([82ea6cd](https://github.com/somaz94/aws-hop-google-extension/commit/82ea6cd9ca9b50abed6f7a3366e08b8d751de2bb))
+- time out DevTools calls in the store screenshot script ([46aaef3](https://github.com/somaz94/aws-hop-google-extension/commit/46aaef368bf1cf3af93a5c2d025424780805a56a))
+- add store screenshots, Korean listing and their generator ([a6fde01](https://github.com/somaz94/aws-hop-google-extension/commit/a6fde01abd0716de817ccdb280369e6fd0947b4d))
+
+### Contributors
+
+- somaz
+
+<br/>
+
 ## [v0.2.0](https://github.com/somaz94/aws-hop-google-extension/compare/v0.1.0...v0.2.0) (2026-10-28)
 
 ### Features

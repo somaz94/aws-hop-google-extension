@@ -3,6 +3,7 @@ import { createOmnibox, defaultDescription, omniboxSuggestions, resolveOmnibox, 
 import { setLanguage } from '../src/i18n/index.js';
 import { normalizeProfile } from '../src/lib/profile.js';
 import { createRecentStore, RECENT_KEY } from '../src/lib/recent.js';
+import { createLandingStore } from '../src/lib/landing.js';
 import { createSessionStore } from '../src/lib/sessions.js';
 import { createStore, DEFAULT_SETTINGS } from '../src/lib/store.js';
 import { createFakeStorage } from './helpers/fakeStorage.js';
@@ -74,18 +75,29 @@ describe('createOmnibox', () => {
     await store.replaceAll(PROFILES);
     await store.saveSettings(settings);
     const calls = [];
-    const tabs = { update: async (props) => calls.push(['update', props]), create: async (props) => calls.push(['create', props]) };
+    const tabs = {
+      update: async (props) => {
+        calls.push(['update', props]);
+        return { id: 5 };
+      },
+      create: async (props) => {
+        calls.push(['create', props]);
+        return { id: 5 };
+      },
+    };
+    const landings = createLandingStore({ area: createFakeStorage({}, 'session').area });
     const defaults = [];
     const sessions = createSessionStore({ area: createFakeStorage({}, 'session').area });
     const omnibox = createOmnibox({
       store,
       recent: createRecentStore({ area: local.area }),
       sessions,
+      landings,
       tabs,
       omnibox: { setDefaultSuggestion: (suggestion) => defaults.push(suggestion.description) },
       uiLanguage: 'en-US',
     });
-    return { omnibox, calls, defaults, local, sessions };
+    return { omnibox, calls, defaults, local, sessions, landings };
   }
   const PROD_URL = 'https://111122223333.signin.aws.amazon.com/console';
 
@@ -98,10 +110,11 @@ describe('createOmnibox', () => {
   });
 
   test('Enter follows the open-in setting and remembers the account', async () => {
-    const { omnibox, calls, local } = await setup();
+    const { omnibox, calls, local, landings } = await setup();
     await omnibox.onInputEntered('shop-prod', 'currentTab');
     expect(calls).toEqual([['create', { url: PROD_URL, active: true }]]);
     expect(local.data[RECENT_KEY]).toEqual(['prod']);
+    expect(await landings.expectedFor(5)).toBe('prod');
 
     const current = await setup({ ...DEFAULT_SETTINGS, openIn: 'current-tab', showRecent: false });
     await current.omnibox.onInputEntered('shop-prod', 'currentTab');

@@ -172,6 +172,101 @@ describe('startGuard', () => {
     expect(seen()).toEqual(['prod']);
   });
 
+  describe('a tab opened for another account', () => {
+    const SESSION_HOST = '111122223333-abcd1234.us-east-1.console.aws.amazon.com';
+    const notice = () => document.querySelector(HOST_TAG)?.shadowRoot.querySelector('.notice') ?? null;
+    const lines = () => [...notice().querySelectorAll('p')].map((p) => p.textContent);
+    const clears = () => runtime.sent.filter((message) => message.type === MSG.CLEAR_LANDING).length;
+    const signedInTo = (account) => document.documentElement.setAttribute(NAV_ATTR, JSON.stringify({ loginDisplayNameAccount: account }));
+
+    test('says where it landed and points at Add session, and dismissing forgets it', async () => {
+      runtime.replies[MSG.GET_LANDING] = { profileId: 'dev' };
+      signedInTo('111122223333');
+      guard = await start({ hostname: SESSION_HOST });
+      await wait(0);
+      expect(lines()).toEqual([
+        'You opened shop-dev, but this tab is signed in to prod · shop-prod.',
+        'To sign in to shop-dev, choose Add session in the account menu at the top right of the console.',
+      ]);
+      expect(clears()).toBe(0);
+      notice().querySelector('.dismiss').click();
+      expect(notice()).toBeNull();
+      expect(clears()).toBe(1);
+    });
+
+    test('without multi-session there is no Add session to point at', async () => {
+      runtime.replies[MSG.GET_LANDING] = { profileId: 'dev' };
+      signedInTo('111122223333');
+      guard = await start();
+      await wait(0);
+      expect(lines()[1]).toBe('To sign in to shop-dev, sign out here first, or choose Turn on multi-session in the account menu.');
+    });
+
+    test('follows the label to the right', async () => {
+      await store.saveSettings({ ...DEFAULT_SETTINGS, guardPosition: 'bottom-right' });
+      runtime.replies[MSG.GET_LANDING] = { profileId: 'dev' };
+      signedInTo('111122223333');
+      guard = await start();
+      await wait(0);
+      expect(notice().classList.contains('right')).toBe(true);
+    });
+
+    test('landing in the expected account forgets it without a word', async () => {
+      runtime.replies[MSG.GET_LANDING] = { profileId: 'prod' };
+      signedInTo('111122223333');
+      guard = await start();
+      await wait(0);
+      expect(notice()).toBeNull();
+      expect(clears()).toBe(1);
+    });
+
+    test('a host identity decides nothing until the navigation info names the role', async () => {
+      runtime.replies[MSG.GET_LANDING] = { profileId: 'dev' };
+      guard = await start({ hostname: SESSION_HOST });
+      await wait(0);
+      expect(guard.state.identity.source).toBe('host');
+      expect(notice()).toBeNull();
+      expect(clears()).toBe(0);
+
+      signedInTo('444455556666');
+      guard.update();
+      await wait(0);
+      expect(notice()).toBeNull();
+      expect(clears()).toBe(1);
+    });
+
+    test('says nothing for an account not in the list, a deleted account or a tab with no record', async () => {
+      runtime.replies[MSG.GET_LANDING] = { profileId: 'dev' };
+      signedInTo('999999999999');
+      guard = await start();
+      await wait(0);
+      expect(notice()).toBeNull();
+      guard.stop();
+
+      signedInTo('111122223333');
+      runtime.replies[MSG.GET_LANDING] = { profileId: 'gone' };
+      guard = await start();
+      await wait(0);
+      expect(notice()).toBeNull();
+      guard.stop();
+
+      runtime.replies[MSG.GET_LANDING] = { profileId: null };
+      guard = await start();
+      await wait(0);
+      expect(notice()).toBeNull();
+      expect(clears()).toBe(0);
+    });
+
+    test('a worker that is gone leaves the guard working', async () => {
+      runtime.sendMessage = () => Promise.reject(new Error('Extension context invalidated.'));
+      signedInTo('111122223333');
+      guard = await start();
+      await wait(0);
+      expect(label()).toBe('prod · shop-prod');
+      expect(notice()).toBeNull();
+    });
+  });
+
   test('the label opens an account menu that asks the worker to open the pick', async () => {
     const menu = () => pill()?.getRootNode().querySelector('.menu') ?? null;
     const names = () => [...menu().querySelectorAll('.name')].map((n) => n.textContent);

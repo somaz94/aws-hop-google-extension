@@ -29,7 +29,7 @@ It never stores a password, an access key or a session token. Every sign-in stil
 
 AWS documents `account` and `roleName` for the Switch Role page; `displayName` and `color` are undocumented prefill parameters that AWS may ignore.
 
-With the console's [multi-session support](https://docs.aws.amazon.com/awsconsolehelpdocs/latest/gsg/multisession.html) turned on you can stay signed in to up to five identities at once; keep opening accounts in a new tab, the default, to use it. Without help, every sign-in address lands on the console's session picker once two sessions are open, so AWS Hop remembers which session each account's console tab is in and opens that account straight in it; the popup marks those accounts **signed in**. An account with no session yet still goes through its sign-in method, where you choose **Sign into new session**. The remembered sessions stay on this browser, survive an extension update or a browser restart, and are forgotten 12 hours after the account's console tab was last seen, which is no sooner than AWS ends the session itself.
+With the console's [multi-session support](https://docs.aws.amazon.com/awsconsolehelpdocs/latest/gsg/multisession.html) turned on you can stay signed in to up to five identities at once; keep opening accounts in a new tab, the default, to use it. Without help, every sign-in address lands on the console's session picker once two sessions are open, so AWS Hop remembers which session each account's console tab is in and opens that account straight in it; the popup marks those accounts **signed in**. An account with no session yet still goes through its sign-in method, where you choose **Sign into new session**. While only one session is open, though, AWS goes straight into it instead of showing the picker, so opening another account lands in the open one. There is no address that avoids this, so the guard tells you when it happens, and choosing **Add session** in the console's account menu signs you in to the other account; AWS Hop opens that account in its own session from then on. The remembered sessions stay on this browser, survive an extension update or a browser restart, and are forgotten 12 hours after the account's console tab was last seen, which is no sooner than AWS ends the session itself.
 
 AWS Hop does not choose a Region: none of these addresses carries one, so the console opens in the Region AWS picks for you. To pin it, set **Default Region** in the console's Unified Settings. For IAM Identity Center, a console page in the destination field, such as `https://ap-northeast-2.console.aws.amazon.com/ec2/home?region=ap-northeast-2`, also sets the Region.
 
@@ -58,6 +58,7 @@ On every `*.console.aws.amazon.com` page, AWS Hop looks up the account you are i
 
 - a stripe across the top and a label in the lower left (or lower right, in the settings), in the account's color (hover it to see where the account was detected from)
 - an account menu when you click that label: type to filter, then Enter or a click opens the account the way the popup does, in its own session when one is open; **–** shrinks the label to a dot, and clicking the dot brings it back
+- a notice when a tab you opened for one account ends up signed in to another, with how to sign in to the one you wanted
 - for protected accounts, a red frame around the whole page and the account name in front of the tab title, such as `[shop-prod] EC2`
 - for accounts that are not in your list, a gray label (can be turned off). The popup then offers **Add**, which opens the add dialog with the account ID filled in
 - a badge on the toolbar icon while that tab is active: the account's tag, or the start of its name without one, in its color, on red for protected accounts and `?` for accounts not in your list
@@ -179,7 +180,7 @@ AWS Hop makes no network requests and has no access to the AWS sign-in pages.
 
 ## Privacy
 
-AWS Hop stores only what you enter: account names, account IDs or aliases, role and permission set names, portal URLs, tags, groups and colors. It stores them in `chrome.storage.sync`, which Chrome syncs between the browsers you are signed in to, and sends them nowhere else. With multi-session support on, it also keeps the address of each account's open console session on that browser, for 12 hours after it last saw it. See [Privacy](docs/PRIVACY.md).
+AWS Hop stores only what you enter: account names, account IDs or aliases, role and permission set names, portal URLs, tags, groups and colors. It stores them in `chrome.storage.sync`, which Chrome syncs between the browsers you are signed in to, and sends them nowhere else. With multi-session support on, it also keeps the address of each account's open console session on that browser, for 12 hours after it last saw it. While a tab it opened is on its way to the console, it keeps which account that tab was opened for in `chrome.storage.session`, for ten minutes at most and never past closing the browser. See [Privacy](docs/PRIVACY.md).
 
 <br/>
 

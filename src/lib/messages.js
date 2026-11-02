@@ -3,6 +3,8 @@ export const MSG = Object.freeze({
   SET_BADGE: 'aws-hop:set-badge',
   SESSION_SEEN: 'aws-hop:session-seen',
   OPEN_PROFILE: 'aws-hop:open-profile',
+  GET_LANDING: 'aws-hop:get-landing',
+  CLEAR_LANDING: 'aws-hop:clear-landing',
 });
 
 /** The options-page hash that opens the editor prefilled with `account`, for the popup's "Add this account". */

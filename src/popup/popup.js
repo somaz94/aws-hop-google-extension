@@ -5,11 +5,10 @@ import { readableTextColor } from '../lib/color.js';
 import { identityFromHost } from '../lib/identity.js';
 import { matchProfile } from '../lib/match.js';
 import { addAccountHash, MSG } from '../lib/messages.js';
-import { openProfile } from '../lib/open.js';
 import { profileColor, profileLabel, profileMeta } from '../lib/profile.js';
 import { createRecentStore, recentProfiles } from '../lib/recent.js';
 import { createSessionStore } from '../lib/sessions.js';
-import { invertsTarget, needsConfirmation, pickerKey, popupSections, resolveOpenTarget } from '../lib/search.js';
+import { invertsTarget, needsConfirmation, pickerKey, popupSections } from '../lib/search.js';
 import { createStore } from '../lib/store.js';
 import { createThemer } from '../lib/theme.js';
 import { getProvider } from '../providers/index.js';
@@ -148,8 +147,8 @@ async function open(profile, invert) {
     render();
     return;
   }
-  const target = resolveOpenTarget(settings.openIn, invert);
-  await openProfile(profile, { settings, recent: recentStore, sessions: sessionStore, tabs: chrome.tabs, target });
+  const tab = await activeTab();
+  await chrome.runtime.sendMessage({ type: MSG.OPEN_PROFILE, profileId: profile.id, invert, tabId: tab?.id });
   window.close();
 }
 

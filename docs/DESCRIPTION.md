@@ -81,7 +81,7 @@ Switch between AWS console accounts and show which account each AWS console tab 
 `storage`
 
 ```text
-Saves the user's account list (account names, account IDs or aliases, role names, portal URLs, tags, groups and colors) and settings in chrome.storage.sync, so the popup can list them and they sync between the user's own browsers. The IDs of the last five accounts opened from the popup are kept in chrome.storage.local on that browser only, to list them first; turning the setting off deletes them. With the console's multi-session support, the address of the console session each account is open in is kept in chrome.storage.local on that browser only, and ignored 12 hours after it was last seen, so the account opens straight in that session. No password, access key, session token or cookie is ever stored.
+Saves the user's account list (account names, account IDs or aliases, role names, portal URLs, tags, groups and colors) and settings in chrome.storage.sync, so the popup can list them and they sync between the user's own browsers. The IDs of the last five accounts opened from the popup are kept in chrome.storage.local on that browser only, to list them first; turning the setting off deletes them. With the console's multi-session support, the address of the console session each account is open in is kept in chrome.storage.local on that browser only, and ignored 12 hours after it was last seen, so the account opens straight in that session. Which account a tab was opened for is kept in chrome.storage.session for ten minutes at most, so the guard can warn the user if the tab ends up signed in to a different account. No password, access key, session token or cookie is ever stored.
 ```
 
 `activeTab`

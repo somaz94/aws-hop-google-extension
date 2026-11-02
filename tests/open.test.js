@@ -1,5 +1,6 @@
 import { describe, test, expect } from '@jest/globals';
-import { createGuardOpener } from '../src/background/open.js';
+import { createPickOpener } from '../src/background/open.js';
+import { createLandingStore } from '../src/lib/landing.js';
 import { openProfile } from '../src/lib/open.js';
 import { normalizeProfile } from '../src/lib/profile.js';
 import { createRecentStore, RECENT_KEY } from '../src/lib/recent.js';
@@ -18,7 +19,17 @@ function deps() {
     local,
     recent: createRecentStore({ area: local.area }),
     sessions: createSessionStore({ area: createFakeStorage({}, 'session').area }),
-    tabs: { update: async (...args) => calls.push(['update', ...args]), create: async (props) => calls.push(['create', props]) },
+    landings: createLandingStore({ area: createFakeStorage({}, 'session').area }),
+    tabs: {
+      update: async (...args) => {
+        calls.push(['update', ...args]);
+        return { id: typeof args[0] === 'number' ? args[0] : 8 };
+      },
+      create: async (props) => {
+        calls.push(['create', props]);
+        return { id: 9 };
+      },
+    },
   };
 }
 
@@ -37,16 +48,30 @@ describe('openProfile', () => {
     ]);
     expect(d.local.data[RECENT_KEY]).toEqual(['prod']);
   });
+
+  test('notes which account each tab was opened for, in whichever tab Chrome reports', async () => {
+    const d = deps();
+    await openProfile(prod, { ...d, settings: DEFAULT_SETTINGS, target: 'new-tab' });
+    await openProfile(prod, { ...d, settings: DEFAULT_SETTINGS, target: 'current-tab', tabId: 7 });
+    await openProfile(prod, { ...d, settings: DEFAULT_SETTINGS, target: 'current-tab' });
+    expect(await Promise.all([9, 7, 8].map((id) => d.landings.expectedFor(id)))).toEqual(['prod', 'prod', 'prod']);
+  });
+
+  test('a tab Chrome does not describe notes nothing', async () => {
+    const d = deps();
+    await openProfile(prod, { ...d, tabs: { create: async () => undefined }, settings: DEFAULT_SETTINGS, target: 'new-tab' });
+    expect(await d.landings.expectedFor(9)).toBeNull();
+  });
 });
 
-describe('createGuardOpener', () => {
+describe('createPickOpener', () => {
   async function setup(settings = DEFAULT_SETTINGS) {
     const d = deps();
     const sync = createFakeStorage();
     const store = createStore({ area: sync.area, onChanged: sync.onChanged });
     await store.replaceAll([prod]);
     await store.saveSettings(settings);
-    return { ...d, open: createGuardOpener({ store, ...d }) };
+    return { ...d, open: createPickOpener({ store, ...d }) };
   }
 
   test('opens the picked account where the setting says, or the other way when inverted', async () => {

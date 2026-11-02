@@ -2,13 +2,14 @@ import { applyLanguageSetting, t } from '../i18n/index.js';
 import { formatAccountId } from '../lib/account.js';
 import { readableTextColor } from '../lib/color.js';
 import { detectIdentity, identityFromHost } from '../lib/identity.js';
+import { isOtherAccount } from '../lib/landing.js';
 import { matchProfile } from '../lib/match.js';
 import { MSG } from '../lib/messages.js';
 import { profileColor, profileLabel } from '../lib/profile.js';
 import { createRecentStore, recentProfiles } from '../lib/recent.js';
 import { createStore } from '../lib/store.js';
 import { PROTECTED_COLOR } from '../lib/tag.js';
-import { collapseGuard, createTitleKeeper, HOST_TAG, renderGuard } from './banner.js';
+import { collapseGuard, createTitleKeeper, HOST_TAG, renderGuard, renderLandingNotice } from './banner.js';
 import { createMenu } from './menu.js';
 
 // Written by nav-bridge.js in the page's main world; the two names must match.
@@ -58,13 +59,23 @@ export function buildBadge(view, profile) {
   return { text, color, textColor: readableTextColor(color) };
 }
 
-/** Sends to the worker; a worker that is not listening, or an extension reloaded under this page, is ignored. */
+/** What to tell someone whose tab opened in `actual` when they asked for `expected`; only a multi-session console has Add session. */
+export function buildLandingNotice(expected, actual, { onSessionHost, position }) {
+  const names = { expected: profileLabel(expected), actual: profileLabel(actual) };
+  return {
+    lines: [t('guard.landing.notice', names), t(onSessionHost ? 'guard.landing.addSession' : 'guard.landing.multiSession', names)],
+    dismiss: t('guard.landing.dismiss'),
+    position,
+  };
+}
+
+/** Sends to the worker and resolves with its reply; a worker that is not listening, or an extension reloaded under this page, is ignored. */
 function workerSender(runtime) {
-  return (message) => {
+  return async (message) => {
     try {
-      runtime?.sendMessage?.(message)?.catch(() => {});
+      return await runtime?.sendMessage?.(message);
     } catch {
-      // Nothing left to tell.
+      return undefined;
     }
   };
 }
@@ -158,6 +169,23 @@ export async function startGuard({
     }),
   });
 
+  const clearLanding = () => send({ type: MSG.CLEAR_LANDING });
+
+  const checkLanding = async () => {
+    const reply = await send({ type: MSG.GET_LANDING });
+    const expected = profiles.find((candidate) => candidate.id === reply?.profileId);
+    const { identity, profile } = state;
+    // The host can still name a Switch Role's source account while the navigation info loads, so it decides nothing.
+    if (!expected || !profile || identity.source === 'host') return;
+    if (isOtherAccount(expected, profile)) {
+      const notice = buildLandingNotice(expected, profile, { onSessionHost, position: settings.guardPosition });
+      renderLandingNotice(doc, notice, { onDismiss: clearLanding });
+    } else {
+      renderLandingNotice(doc, null);
+      clearLanding();
+    }
+  };
+
   const update = () => {
     const identity = detectIdentity({ hostname, navInfo: readNavInfo(doc), doc });
     const profile = matchProfile(profiles, identity);
@@ -174,6 +202,7 @@ export async function startGuard({
     sendBadge();
     // The worker reads the session's address from the sender, so only the account is sent.
     if (profile && onSessionHost) send({ type: MSG.SESSION_SEEN, profileId: profile.id });
+    if (view) checkLanding();
   };
 
   update();

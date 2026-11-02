@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 import { describe, test, expect, beforeEach } from '@jest/globals';
-import { collapseGuard, createTitleKeeper, HOST_TAG, renderGuard } from '../src/content/banner.js';
+import { collapseGuard, createTitleKeeper, HOST_TAG, renderGuard, renderLandingNotice } from '../src/content/banner.js';
 
 const view = (overrides = {}) => ({
   color: '#0073bb', textColor: '#ffffff', label: 'prod · shop', account: '1111-2222-3333',
@@ -10,8 +10,55 @@ const view = (overrides = {}) => ({
   ...overrides,
 });
 
+const notice = (overrides = {}) => ({ lines: ['first', 'second'], dismiss: 'Dismiss', position: 'bottom-left', ...overrides });
+
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 const root = () => document.querySelector(HOST_TAG).shadowRoot;
+
+describe('renderLandingNotice', () => {
+  const box = () => root().querySelector('.notice');
+
+  beforeEach(() => {
+    document.querySelector(HOST_TAG)?.remove();
+  });
+
+  test('does nothing without a guard on the page', () => {
+    expect(() => renderLandingNotice(document, notice())).not.toThrow();
+    expect(document.querySelector(HOST_TAG)).toBeNull();
+  });
+
+  test('draws one notice, replaced by the next and removed by null', () => {
+    renderGuard(document, view());
+    renderLandingNotice(document, notice());
+    renderLandingNotice(document, notice({ lines: ['other'], position: 'bottom-right' }));
+    expect(root().querySelectorAll('.notice')).toHaveLength(1);
+    expect(box().textContent).toContain('other');
+    expect(box().classList.contains('right')).toBe(true);
+    renderLandingNotice(document, null);
+    expect(box()).toBeNull();
+  });
+
+  test('account names stay text', () => {
+    renderGuard(document, view());
+    renderLandingNotice(document, notice({ lines: ['<img src=x>'] }));
+    expect(box().querySelector('img')).toBeNull();
+    expect(box().querySelector('p').textContent).toBe('<img src=x>');
+  });
+
+  test('the button removes it, with or without a listener', () => {
+    let dismissed = 0;
+    renderGuard(document, view());
+    renderLandingNotice(document, notice(), { onDismiss: () => { dismissed += 1; } });
+    expect(box().querySelector('.dismiss').getAttribute('aria-label')).toBe('Dismiss');
+    box().querySelector('.dismiss').click();
+    expect(box()).toBeNull();
+    expect(dismissed).toBe(1);
+
+    renderLandingNotice(document, notice());
+    box().querySelector('.dismiss').click();
+    expect(box()).toBeNull();
+  });
+});
 
 describe('renderGuard', () => {
   beforeEach(() => {

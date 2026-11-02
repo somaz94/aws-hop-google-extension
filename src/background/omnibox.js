@@ -39,7 +39,7 @@ export function omniboxSuggestions(profiles, text, limit = SUGGEST_MAX) {
   }));
 }
 
-export function createOmnibox({ store, recent, sessions, tabs, omnibox, uiLanguage }) {
+export function createOmnibox({ store, recent, sessions, landings, tabs, omnibox, uiLanguage }) {
   async function load() {
     const [profiles, settings] = await Promise.all([store.loadProfiles(), store.loadSettings()]);
     applyLanguageSetting(settings, uiLanguage);
@@ -59,7 +59,7 @@ export function createOmnibox({ store, recent, sessions, tabs, omnibox, uiLangua
       const { profile } = resolveOmnibox(profiles, text, settings);
       if (!profile) return;
       const target = disposition === 'currentTab' ? resolveOpenTarget(settings.openIn, false) : 'new-tab';
-      await openProfile(profile, { settings, recent, sessions, tabs, target, active: disposition !== 'newBackgroundTab' });
+      await openProfile(profile, { settings, recent, sessions, landings, tabs, target, active: disposition !== 'newBackgroundTab' });
     },
   };
 }

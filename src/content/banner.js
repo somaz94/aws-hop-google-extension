@@ -26,6 +26,16 @@ const STYLE = `
 .pill.muted { opacity: 0.75; }
 .pill.collapsed { width: 14px; height: 14px; padding: 0; }
 .pill.collapsed span { display: none; }
+.notice {
+  position: fixed; left: 12px; bottom: 80px; z-index: 2147483646;
+  display: flex; gap: 8px; align-items: flex-start; width: 320px; padding: 10px 12px;
+  border-left: 4px solid #ff9900; border-radius: 8px; background: #232f3e; color: #ffffff;
+  font: 13px/1.4 ${FONT}; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+.notice.right { left: auto; right: 12px; }
+.notice p { margin: 0 0 4px; }
+.notice p:last-child { margin: 0; }
+.notice .dismiss { flex: none; padding: 0 4px; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
 `;
 
 function build(doc, host, onActivate) {
@@ -76,6 +86,27 @@ export function renderGuard(doc, view, { onActivate } = {}) {
   pill.title = view.tooltip;
   root.querySelector('.label').textContent = view.label;
   root.querySelector('.account').textContent = view.account;
+}
+
+/** Draws, replaces or (with a null notice) removes the wrong-account notice. Profile names go through textContent only. */
+export function renderLandingNotice(doc, notice, { onDismiss } = {}) {
+  const root = doc.querySelector(HOST_TAG)?.shadowRoot;
+  if (!root) return;
+  root.querySelector('.notice')?.remove();
+  if (!notice) return;
+  const box = doc.createElement('div');
+  box.className = notice.position === 'bottom-right' ? 'notice right' : 'notice';
+  box.setAttribute('role', 'alert');
+  const body = doc.createElement('div');
+  for (const line of notice.lines) body.append(Object.assign(doc.createElement('p'), { textContent: line }));
+  const dismiss = Object.assign(doc.createElement('button'), { className: 'dismiss', type: 'button', textContent: '×', title: notice.dismiss });
+  dismiss.setAttribute('aria-label', notice.dismiss);
+  dismiss.addEventListener('click', () => {
+    box.remove();
+    onDismiss?.();
+  });
+  box.append(body, dismiss);
+  root.append(box);
 }
 
 /** Shrinks the label to a dot; clicking the dot brings it back. */

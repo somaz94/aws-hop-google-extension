@@ -66,6 +66,10 @@ export default Object.freeze({
 
   'guard.unregistered': 'Account not in your list',
   'guard.tooltip': 'AWS Hop: {label} ({account}), detected from the {source}. Click to switch accounts.',
+  'guard.landing.notice': 'You opened {expected}, but this tab is signed in to {actual}.',
+  'guard.landing.addSession': 'To sign in to {expected}, choose Add session in the account menu at the top right of the console.',
+  'guard.landing.multiSession': 'To sign in to {expected}, sign out here first, or choose Turn on multi-session in the account menu.',
+  'guard.landing.dismiss': 'Dismiss',
   'guard.menu.label': 'Switch account',
   'guard.menu.collapse': 'Shrink to a dot',
   'guard.source.nav': 'console navigation',

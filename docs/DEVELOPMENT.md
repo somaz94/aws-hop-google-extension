@@ -30,7 +30,7 @@ Plain ES modules, loaded straight from `src/` with no bundler. Each directory ha
 | Directory | Role |
 |---|---|
 | `src/providers/` | One module per sign-in method, plus the registry in `index.js` |
-| `src/lib/` | The account model, tags and colors, storage, console account detection, matching, search, list editing (reorder, selection, bulk edit), remembered console sessions, opening an account and the theme. No page layout and no Chrome API other than storage; `theme.js` only sets an attribute on the document it is given |
+| `src/lib/` | The account model, tags and colors, storage, console account detection, matching, search, list editing (reorder, selection, bulk edit), remembered console sessions, which account a tab was opened for, opening an account and the theme. No page layout and no Chrome API other than storage; `theme.js` only sets an attribute on the document it is given |
 | `src/importers/` | Parsers that turn `~/.aws/config`, an aws-extend-switch-roles configuration or JSON into accounts, de-duplication and merging, and the account ID command for each terminal (one `CLI_SHELLS` entry per terminal) |
 | `src/i18n/` | One message catalog per language, the lookup function and the DOM helper that fills `data-i18n` attributes |
 | `_locales/` | Chrome's own catalogs, for the few manifest strings Chrome shows itself |
@@ -56,7 +56,9 @@ Content scripts declared in the manifest cannot be ES modules, and the guard nee
 
 On a multi-session host the guard also reports which account the page belongs to (`MSG.SESSION_SEEN`, the account only); the worker takes the session's origin from `sender.url`, never from the message, and keeps it with the time it was seen in `chrome.storage.local` for `openUrlFor` in the popup, the address bar and the guard menu. An entry is ignored 12 hours after it was last seen; no console session lasts longer from sign-in, so a live session is never forgotten early.
 
-Clicking the label opens `menu.js`, built on demand and removed on close so the account list is in the page only while it is shown; it stops key events so typing never triggers console shortcuts. A pick goes to the worker as `MSG.OPEN_PROFILE` (the account id and the modifier only), and the worker opens it through `src/lib/open.js`, the one `openProfile` the popup and the address bar use too.
+Clicking the label opens `menu.js`, built on demand and removed on close so the account list is in the page only while it is shown; it stops key events so typing never triggers console shortcuts. A pick goes to the worker as `MSG.OPEN_PROFILE` (the account id and the modifier only), and the worker opens it through `src/lib/open.js`, the one `openProfile` the address bar uses too. The popup sends the same message, because a new active tab closes it before it could finish.
+
+With one multi-session session open, AWS sends every sign-in address into that session, whichever account it names, and no documented address adds a session. So `openProfile` notes which account each tab was opened for (`src/lib/landing.js`, in `chrome.storage.session`), and the guard asks the worker for it (`MSG.GET_LANDING`) whenever what it shows changes. A different account draws the notice; the expected one clears the note. A multi-session host identity decides nothing, because it can still name a Switch Role's source account, and an account outside the list decides nothing either, because an alias and an ID for one account would read as different.
 
 The guard also sends its toolbar badge to the service worker (`MSG.SET_BADGE`) whenever what it shows changes, and an empty one on stop. The worker sets it for the sending tab only and clears it when the tab starts loading a new page; `tabs.onUpdated` reports that status without the `tabs` permission, so the badge adds none.
 

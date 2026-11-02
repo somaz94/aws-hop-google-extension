@@ -492,12 +492,48 @@ async function run(cdp) {
   check('marks protected accounts', await popup.eval(`[...document.querySelectorAll('.row.guarded .name')].map((n) => n.textContent).sort()`), ['shop-dev', 'shop-prod']);
   const devColor = colorFor('shop').slice(1);
   await popupOpens(cdp, base, 'shop-dev', `https://signin.aws.amazon.com/switchrole?account=444455556666&roleName=Developer&displayName=shop-dev&color=${devColor}`);
-  check('closes itself after opening an account', (await cdp.pageUrls()).filter((url) => url.endsWith('/popup/popup.html')).length, 1);
+  check('closes itself after opening an account', await waitFor(async () => {
+    const open = (await cdp.pageUrls()).filter((url) => url.endsWith('/popup/popup.html')).length;
+    return open === 1 ? open : null;
+  }, 'the popup to close').catch((error) => error.message), 1);
   await popupOpens(cdp, base, 'data', `${SESSION}/console/home`);
   await popupOpens(cdp, base, 'shop-prod', 'https://111122223333.signin.aws.amazon.com/console');
-  const recentNames = await options.eval(`Promise.all([chrome.storage.local.get('recentProfiles'), chrome.storage.sync.get(null)])
-    .then(([local, sync]) => (local.recentProfiles ?? []).map((id) => sync['profile:' + id].name))`);
-  check('remembers opened accounts on this device, latest first, before the popup closes', recentNames, ['shop-prod', 'data-sso', 'shop-dev']);
+  const recentExpected = ['shop-prod', 'data-sso', 'shop-dev'];
+  // An earlier tab already sits at the shop-prod address, so popupOpens does not wait for the worker to finish this one.
+  const recentNames = await waitFor(async () => {
+    const names = await options.eval(`Promise.all([chrome.storage.local.get('recentProfiles'), chrome.storage.sync.get(null)])
+      .then(([local, sync]) => (local.recentProfiles ?? []).map((id) => sync['profile:' + id].name))`);
+    return JSON.stringify(names) === JSON.stringify(recentExpected) ? names : null;
+  }, 'the recent list').catch((error) => error.message);
+  check('remembers opened accounts on this device, latest first, even though the popup closes', recentNames, recentExpected);
+
+  console.log('Landing in another account');
+  const profileIdOf = (name) => options.eval(`chrome.storage.sync.get(null).then((items) => Object.values(items).find((item) => item?.name === ${JSON.stringify(name)})?.id)`);
+  const [prodId, devId] = [await profileIdOf('shop-prod'), await profileIdOf('shop-dev')];
+  const landingEntries = () => options.eval(`chrome.storage.session.get(null).then((items) => Object.entries(items).filter(([key]) => key.startsWith('landing:')).map(([key, entry]) => [Number(key.slice('landing:'.length)), entry.profileId]))`);
+  check('notes which account a tab from the popup was opened for', (await landingEntries()).some(([, id]) => id === devId), true);
+  const tabIds = () => options.eval(`chrome.tabs.query({}).then((tabs) => tabs.map((tab) => tab.id))`);
+  /** A console tab on the prod account that the worker believes was opened for `profileId`, reloaded so its guard asks. */
+  const landedTab = async (profileId) => {
+    const before = await tabIds();
+    const page = await cdp.open(`https://us-east-1.console.aws.amazon.com/console/home?nav=${nav}`);
+    const tabId = (await tabIds()).find((id) => !before.includes(id));
+    await options.eval(`chrome.storage.session.set({ ['landing:${tabId}']: { profileId: ${JSON.stringify(profileId)}, at: Date.now() } })`);
+    // The guard on the old page can ask too, so wait for the new one before anything reads or clicks the notice.
+    await page.eval(`window.awsHopOldPage = true; setTimeout(() => location.reload(), 0)`);
+    await waitFor(() => page.eval(`!window.awsHopOldPage && Boolean(document.querySelector('aws-hop-guard'))`), 'the reloaded guard');
+    return { page, tabId };
+  };
+  const landingNotice = `document.querySelector('aws-hop-guard')?.shadowRoot.querySelector('.notice p')?.textContent ?? null`;
+  const wrong = await landedTab(devId);
+  check('warns in a tab that landed in another account', await waitFor(() => wrong.page.eval(landingNotice), 'the notice').catch(() => null), 'You opened qa · shop-dev, but this tab is signed in to prod · shop-prod.');
+  await wrong.page.eval(`document.querySelector('aws-hop-guard').shadowRoot.querySelector('.notice .dismiss').click()`);
+  check('and dismissing it forgets the tab', await waitFor(async () => (await landingEntries()).every(([id]) => id !== wrong.tabId) || null, 'the forgotten tab').catch(() => false), true);
+  await wrong.page.close();
+  const right = await landedTab(prodId);
+  check('stays quiet and forgets a tab that landed where it should', await waitFor(async () => (await landingEntries()).every(([id]) => id !== right.tabId) || null, 'the forgotten tab').catch(() => false), true);
+  check('with no notice', await right.page.eval(landingNotice), null);
+  await right.page.close();
 
   await options.eval(`document.getElementById('setting-confirmGuarded').click()`);
   await waitFor(() => options.eval(`chrome.storage.sync.get('settings').then((items) => items.settings?.confirmGuarded || null)`), 'the confirm setting');

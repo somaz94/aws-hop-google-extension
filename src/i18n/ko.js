@@ -65,6 +65,10 @@ export default Object.freeze({
 
   'guard.unregistered': '목록에 없는 계정',
   'guard.tooltip': 'AWS Hop: {label} ({account}). {source}에서 감지했습니다. 클릭하면 다른 계정으로 전환할 수 있습니다.',
+  'guard.landing.notice': '{expected}을(를) 열었지만 이 탭은 {actual}에 로그인되어 있습니다.',
+  'guard.landing.addSession': '{expected}에 로그인하려면 콘솔 오른쪽 위 계정 메뉴에서 Add session(세션 추가)을 선택하세요.',
+  'guard.landing.multiSession': '{expected}에 로그인하려면 여기서 먼저 로그아웃하거나, 계정 메뉴에서 Turn on multi-session(멀티 세션 켜기)을 선택하세요.',
+  'guard.landing.dismiss': '닫기',
   'guard.menu.label': '계정 전환',
   'guard.menu.collapse': '점으로 접기',
   'guard.source.nav': '콘솔 내비게이션 정보',

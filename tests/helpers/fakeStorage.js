@@ -43,6 +43,7 @@ export function createFakeStorage(initial = {}, areaName = 'sync') {
 export function createFakeRuntime() {
   const listeners = new Set();
   const sent = [];
+  const replies = {};
   return {
     onMessage: {
       addListener: (listener) => listeners.add(listener),
@@ -51,9 +52,11 @@ export function createFakeRuntime() {
     /** What the page sent to the extension; resolves like Chrome does when a listener exists. */
     sendMessage(message) {
       sent.push(message);
-      return Promise.resolve();
+      return Promise.resolve(replies[message.type]);
     },
     sent,
+    /** What the worker answers, by message type. */
+    replies,
     /** Delivers a message the way Chrome does and resolves with whatever the listener sent back. */
     send(message) {
       let reply;

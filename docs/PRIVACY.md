@@ -15,6 +15,7 @@ Only what you enter on the options page or import:
 - your AWS Hop settings
 - which of your accounts you opened most recently (up to five, by their AWS Hop entry), unless you turn the recent list off
 - with the console's multi-session support, the address of the console session each of your accounts is open in (such as `https://111122223333-abcd1234.us-east-1.console.aws.amazon.com`), so the account opens straight in it
+- which of your accounts a tab was opened for, while it is on its way to the console, to warn you if it ends up signed in to a different one
 
 AWS Hop never asks for, reads or stores passwords, access keys, session tokens or cookies.
 
@@ -22,7 +23,7 @@ AWS Hop never asks for, reads or stores passwords, access keys, session tokens o
 
 ## Where it is stored
 
-In `chrome.storage.sync`, except the recently opened list, which stays in `chrome.storage.local` on that one browser and is deleted when you turn the recent list off, and the session addresses, which also stay in `chrome.storage.local` on that browser and are dropped 12 hours after the session was last seen. Chrome keeps it in your browser profile and, if you are signed in to Chrome with sync turned on, syncs it to your other browsers through your Google account. AWS Hop has no server and makes no network requests.
+In `chrome.storage.sync`, except the recently opened list, which stays in `chrome.storage.local` on that one browser and is deleted when you turn the recent list off, and the session addresses, which also stay in `chrome.storage.local` on that browser and are dropped 12 hours after the session was last seen, and which account a tab was opened for, which stays in `chrome.storage.session` on that browser for ten minutes at most and is gone when the browser closes. Chrome keeps it in your browser profile and, if you are signed in to Chrome with sync turned on, syncs it to your other browsers through your Google account. AWS Hop has no server and makes no network requests.
 
 <br/>
 

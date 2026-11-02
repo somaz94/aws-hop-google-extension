@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.4.0](https://github.com/somaz94/aws-hop-google-extension/compare/v0.3.0...v0.4.0) (2026-11-02)
+
+### Features
+
+- warn when a tab lands in a different account than the one opened ([a45ecc8](https://github.com/somaz94/aws-hop-google-extension/commit/a45ecc8172c59c682f3264e62627bbeec9b832fb))
+
+### Documentation
+
+- describe the wrong-account notice in the store listing ([39d91e5](https://github.com/somaz94/aws-hop-google-extension/commit/39d91e59df4b572578a1026b5d1246cc367b6aa4))
+
+### Chores
+
+- bump the lockfile version to 0.4.0 ([1f82563](https://github.com/somaz94/aws-hop-google-extension/commit/1f825638ff96ad6f78e34131b8542a47a7746f8d))
+- bump version to 0.4.0 ([b9ecd2e](https://github.com/somaz94/aws-hop-google-extension/commit/b9ecd2e2859565e029da4cefcd9c7914245fe250))
+
+### Contributors
+
+- somaz
+
+<br/>
+
 ## [v0.3.0](https://github.com/somaz94/aws-hop-google-extension/compare/v0.2.0...v0.3.0) (2026-10-29)
 
 ### Features

@@ -26,6 +26,7 @@ Account guard
 - The label sits in the lower left or lower right corner, your choice
 - Accounts you have not added get a gray label, and the popup offers to add them
 - Click the label to switch to another account right from the console page
+- If a tab you opened for one account ends up signed in to another, a notice says so and how to sign in to the one you wanted
 
 Your accounts, your labels
 - Free-form tags (prod, qa, a project name), a color per project and a protected flag
@@ -39,7 +40,7 @@ Your accounts, your labels
 - English and Korean, in a light or dark theme or following your system
 
 Privacy
-- Stores only the account names, account IDs, role names, portal URLs and labels you enter, in Chrome sync storage; the recently opened list and open console session addresses stay on the browser
+- Stores only the account names, account IDs, role names, portal URLs and labels you enter, in Chrome sync storage; the recently opened list, open console session addresses and which account a tab was opened for stay on the browser
 - No network requests, no analytics, no server
 - Open source: https://github.com/somaz94/aws-hop-google-extension
 
